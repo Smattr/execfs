@@ -48,16 +48,17 @@ static int debug_printf(char *format, ...) {
 }
 
 /* Parse command line arguments. Returns 0 on success, non-zero on failure. */
-static int parse_args(int argc, char **argv) {
+static int parse_args(int argc, char **argv, int *last) {
     static struct option options[] = {
         {"debug", no_argument, &debug, 1},
         {"config", required_argument, 0, 'c'},
+        {"fuse", no_argument, 0, 'f'},
         {0, 0, 0, 0},
     };
     int index;
     int c;
 
-    while ((c = getopt_long(argc, argv, "dc:", options, &index)) != -1) {
+    while ((c = getopt_long(argc, argv, "dc:f", options, &index)) != -1) {
         switch (c) {
             case 0: {
                 /* This should have set a flag. */
@@ -78,6 +79,11 @@ static int parse_args(int argc, char **argv) {
             } case 'd': {
                 debug = 1;
                 break;
+            } case 'f': {
+                /* We've hit the FUSE arguments. */
+                assert(last != NULL);
+                *last = optind;
+                return 0;
             } default: {
                 fprintf(stderr, "Unrecognised argument: %c\n", optopt);
                 errno = EINVAL;
@@ -85,18 +91,27 @@ static int parse_args(int argc, char **argv) {
             }
         }
     }
-    return 0;
+
+    /* If we reached here, then we never found a -f/--fuse argument. */
+    fprintf(stderr, "No -f/--fuse argument provided.\n");
+    errno = EINVAL;
+    return -1;
 }
 
+static struct fuse_operations ops = {
+    .open = NULL,
+};
+
 int main(int argc, char **argv) {
-    if (parse_args(argc, argv) != 0) {
+    int last_arg;
+    if (parse_args(argc, argv, &last_arg) != 0) {
         perror("Failed to parse arguments");
         return -1;
     }
 
     if (config_filename == NULL) {
         fprintf(stderr, "No configuration file specified.\n"
-                        "Usage: %s [--debug] --config filename\n", argv[0]);
+                        "Usage: %s [--debug] --config filename --fuse fuse_arguments...\n", argv[0]);
         return -1;
     }
 
@@ -110,6 +125,21 @@ int main(int argc, char **argv) {
         debug_dump_entries();
     }
 
-    return -1;
-//    return fuse_main(argc, argv, &ef_ops, NULL);
+    --last_arg;
+    assert(last_arg > 0);
+    assert(last_arg < argc);
+    /* Adjust arguments to hide any that we handled from FUSE. */
+    argv[last_arg] = argv[0];
+    argv += last_arg;
+    argc -= last_arg;
+    assert(argv[argc] == NULL);
+    if (debug) {
+        fprintf(stderr, "Altered argument parameters:\n");
+        int i;
+        for (i = 0; i < argc; ++i) {
+            fprintf(stderr, "%d: %s\n", i, argv[i]);
+        }
+    }
+
+    return fuse_main(argc, argv, &ops, NULL);
 }

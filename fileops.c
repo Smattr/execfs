@@ -36,25 +36,24 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
     } else {
         int i;
         for (i = 0; i < entries_sz; ++i) {
-            if (!strcmp(entries[i]->path, path)) {
+            if (path[0] == '/' && !strcmp(entries[i]->path, path + 1)) {
                 stbuf->st_mode = S_IFIFO
-                    | entries[i]->u_r ? S_IRUSR : 0
-                    | entries[i]->u_w ? S_IWUSR : 0
-                    | entries[i]->u_x ? S_IXUSR : 0
-                    | entries[i]->g_r ? S_IRGRP : 0
-                    | entries[i]->g_w ? S_IWGRP : 0
-                    | entries[i]->g_x ? S_IXGRP : 0
-                    | entries[i]->o_r ? S_IROTH : 0
-                    | entries[i]->o_w ? S_IWOTH : 0
-                    | entries[i]->o_x ? S_IXOTH : 0;
+                    | (entries[i]->u_r ? S_IRUSR : 0)
+                    | (entries[i]->u_w ? S_IWUSR : 0)
+                    | (entries[i]->u_x ? S_IXUSR : 0)
+                    | (entries[i]->g_r ? S_IRGRP : 0)
+                    | (entries[i]->g_w ? S_IWGRP : 0)
+                    | (entries[i]->g_x ? S_IXGRP : 0)
+                    | (entries[i]->o_r ? S_IROTH : 0)
+                    | (entries[i]->o_w ? S_IWOTH : 0)
+                    | (entries[i]->o_x ? S_IXOTH : 0);
                 stbuf->st_nlink = 1;
                 break;
             }
         }
         if (i == entries_sz) {
             /* Matching entry not found. */
-            errno = ENOENT;
-            return -1;
+            return -ENOENT;
         }
     }
 

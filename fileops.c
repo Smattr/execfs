@@ -60,6 +60,22 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
     return 0;
 }
 
+static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+    if (strcmp("/", path)) {
+        /* Don't support subdirectories. */
+        return -EBADF;
+    }
+
+    int i;
+    for (i = offset; i < entries_sz; ++i) {
+        if (filler(buf, entries[i]->path, NULL, i + 1) != 0) {
+            return 0;
+        }
+    }
+    return 0;
+}
+
 struct fuse_operations ops = {
     .getattr = &exec_getattr,
+    .readdir = &exec_readdir,
 };

@@ -1,6 +1,8 @@
 #ifndef _EXECFS_ENTRY_H_
 #define _EXECFS_ENTRY_H_
 
+#include <stddef.h>
+
 typedef struct {
     char *path;
     int u_r : 1;
@@ -14,5 +16,8 @@ typedef struct {
     int o_x : 1;
     char *command;
 } entry_t;
+
+extern entry_t **entries;
+extern size_t entries_sz;
 
 #endif

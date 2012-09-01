@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include "entry.h"
+#include "fileops.h"
 
 /* Configuration file to read. */
 static char *config_filename = NULL;
@@ -21,8 +22,8 @@ static char *config_filename = NULL;
 static int debug = 0;
 
 /* Entries to present to the user in the mount point. */
-static entry_t **entries = NULL;
-static size_t entries_sz = 0;
+entry_t **entries = NULL;
+size_t entries_sz = 0;
 
 /* Debugging functions. */
 static void debug_dump_entries(void) {
@@ -98,10 +99,6 @@ static int parse_args(int argc, char **argv, int *last) {
     return -1;
 }
 
-static struct fuse_operations ops = {
-    .open = NULL,
-};
-
 int main(int argc, char **argv) {
     int last_arg;
     if (parse_args(argc, argv, &last_arg) != 0) {
@@ -121,14 +118,18 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    /* We don't need the configuration file any more. */
+    free(config_filename);
+    config_filename = NULL;
+
     if (debug) {
         debug_dump_entries();
     }
 
+    /* Adjust arguments to hide any that we handled from FUSE. */
     --last_arg;
     assert(last_arg > 0);
     assert(last_arg < argc);
-    /* Adjust arguments to hide any that we handled from FUSE. */
     argv[last_arg] = argv[0];
     argv += last_arg;
     argc -= last_arg;

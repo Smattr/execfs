@@ -69,13 +69,13 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
     stbuf->st_uid = uid;
     stbuf->st_gid = gid;
     /* stbuf-st_rdev is irrelevant. */
-    stbuf->st_size = 0;
     /* stbuf->st_blksize is ignored. */
     /* stbuf->st_blocks is ignored. */
     stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
 
     if (is_root(path)) {
         stbuf->st_mode = S_IFDIR|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
+        stbuf->st_size = 0;
         stbuf->st_nlink = 1;
     } else {
         entry_t *e = find_entry(path);
@@ -83,7 +83,14 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
             return -ENOENT;
         }
 
-        stbuf->st_mode = S_IFIFO
+        /* It would be nice to mark entries as FIFOs (S_IFIFO), but
+         * irritatingly the kernel doesn't call FUSE handlers for FIFOs so we
+         * never get read/write calls. To further complicate matters some
+         * programs like cat attempt to be clever and stat the size of a file
+         * to see how much they should read. To get around this we need to set
+         * a reasonably large file size.
+         */
+        stbuf->st_mode = S_IFREG
             | (e->u_r ? S_IRUSR : 0)
             | (e->u_w ? S_IWUSR : 0)
             | (e->u_x ? S_IXUSR : 0)
@@ -93,6 +100,7 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
             | (e->o_r ? S_IROTH : 0)
             | (e->o_w ? S_IWOTH : 0)
             | (e->o_x ? S_IXOTH : 0);
+        stbuf->st_size = 1024;
         stbuf->st_nlink = 1;
     }
 

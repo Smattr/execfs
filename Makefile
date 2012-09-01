@@ -2,17 +2,31 @@ FUSE_ARGS=$(shell pkg-config fuse --cflags --libs)
 
 default: execfs
 
+ifeq (${V},1)
+Q:=
+else
+Q:=@
+endif
+
+ifeq (${DEBUG},1)
+WERROR:=
+else
+WERROR:=-Werror
+endif
+
 execfs: main.o config.o
-	gcc -Wall -o $@ $^ ${FUSE_ARGS}
+	@echo " [LD] $@"
+	${Q}gcc -Wall ${WERROR} -o $@ $^ ${FUSE_ARGS}
 
 main.o: entry.h config.h
 config.o: entry.h config.h
 
 %.o: %.c
-	gcc -Wall -c -o $@ $< ${FUSE_ARGS}
+	@echo " [CC] $@"
+	${Q}gcc -Wall ${WERROR} -c -o $@ $< ${FUSE_ARGS}
 
 clean:
-	rm execfs
-	rm *.o
+	@echo " [CLEAN] execfs *.o"
+	${Q}rm execfs *.o
 
 .PHONY: default clean

@@ -99,6 +99,22 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
     return 0;
 }
 
+static int exec_open(const char *path, struct fuse_file_info *fi) {
+    entry_t *e = find_entry(path);
+    if (e == NULL) {
+        return -ENOENT;
+    }
+
+    unsigned int rights = access_rights(e);
+
+    if ((fi->flags & O_RDONLY && !(rights & R)) ||
+        (fi->flags & O_WRONLY && !(rights & W))) {
+        return -EACCES;
+    }
+
+    return 0;
+}
+
 static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
     if (!is_root(path)) {
         /* Don't support subdirectories. */

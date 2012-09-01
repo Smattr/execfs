@@ -11,11 +11,55 @@
 #include "entry.h"
 #include "fileops.h"
 
+#define BIT(n) (1UL << (n))
+#define R BIT(2)
+#define W BIT(1)
+#define X BIT(0)
+
 /* Note: doing a linear search on the entries array is not an efficient way of
  * implementing a file system that will be under heavy load, but we assume that
  * there will be few entries in the file system and these will not be accessed
  * frequently.
  */
+
+static int is_root(const char *path) {
+    return !strcmp("/", path);
+}
+
+static entry_t *find_entry(const char *path) {
+    if (path[0] != '/') {
+        /* We were passed a path outside this mount point (?) */
+        return NULL;
+    }
+
+    int i;
+    for (i = 0; i < entries_sz; ++i) {
+        if (!strcmp(path + 1, entries[i]->path)) {
+            return entries[i];
+        }
+    }
+    return NULL;
+}
+
+static unsigned int access_rights(entry_t *entry) {
+    struct fuse_context *context = fuse_get_context();
+    unsigned int rights;
+
+    if (context->uid == uid) {
+        rights = (entry->u_r ? R : 0)
+            | (entry->u_w ? W : 0)
+            | (entry->u_x ? X : 0);
+    } else if (context->gid == gid) {
+        rights = (entry->g_r ? R : 0)
+            | (entry->g_w ? W : 0)
+            | (entry->g_x ? X : 0);
+    } else {
+        rights = (entry->o_r ? R : 0)
+            | (entry->o_w ? W : 0)
+            | (entry->o_x ? X : 0);
+    }
+    return rights;
+}
 
 static int exec_getattr(const char *path, struct stat *stbuf) {
     assert(stbuf != NULL);
@@ -30,38 +74,33 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
     /* stbuf->st_blocks is ignored. */
     stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
 
-    if (!strcmp("/", path)) {
+    if (is_root(path)) {
         stbuf->st_mode = S_IFDIR|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
         stbuf->st_nlink = 1;
     } else {
-        int i;
-        for (i = 0; i < entries_sz; ++i) {
-            if (path[0] == '/' && !strcmp(entries[i]->path, path + 1)) {
-                stbuf->st_mode = S_IFIFO
-                    | (entries[i]->u_r ? S_IRUSR : 0)
-                    | (entries[i]->u_w ? S_IWUSR : 0)
-                    | (entries[i]->u_x ? S_IXUSR : 0)
-                    | (entries[i]->g_r ? S_IRGRP : 0)
-                    | (entries[i]->g_w ? S_IWGRP : 0)
-                    | (entries[i]->g_x ? S_IXGRP : 0)
-                    | (entries[i]->o_r ? S_IROTH : 0)
-                    | (entries[i]->o_w ? S_IWOTH : 0)
-                    | (entries[i]->o_x ? S_IXOTH : 0);
-                stbuf->st_nlink = 1;
-                break;
-            }
-        }
-        if (i == entries_sz) {
-            /* Matching entry not found. */
+        entry_t *e = find_entry(path);
+        if (e == NULL) {
             return -ENOENT;
         }
+
+        stbuf->st_mode = S_IFIFO
+            | (e->u_r ? S_IRUSR : 0)
+            | (e->u_w ? S_IWUSR : 0)
+            | (e->u_x ? S_IXUSR : 0)
+            | (e->g_r ? S_IRGRP : 0)
+            | (e->g_w ? S_IWGRP : 0)
+            | (e->g_x ? S_IXGRP : 0)
+            | (e->o_r ? S_IROTH : 0)
+            | (e->o_w ? S_IWOTH : 0)
+            | (e->o_x ? S_IXOTH : 0);
+        stbuf->st_nlink = 1;
     }
 
     return 0;
 }
 
 static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
-    if (strcmp("/", path)) {
+    if (!is_root(path)) {
         /* Don't support subdirectories. */
         return -EBADF;
     }

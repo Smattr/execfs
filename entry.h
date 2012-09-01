@@ -2,6 +2,7 @@
 #define _EXECFS_ENTRY_H_
 
 #include <stddef.h>
+#include <unistd.h>
 
 typedef struct {
     char *path;
@@ -19,5 +20,8 @@ typedef struct {
 
 extern entry_t **entries;
 extern size_t entries_sz;
+
+extern uid_t uid;
+extern gid_t gid;
 
 #endif

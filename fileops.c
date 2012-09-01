@@ -22,8 +22,8 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
 
     /* stbuf->st_dev is ignored. */
     /* stbuf->st_ino is ignored. */
-    stbuf->st_uid = 0;
-    stbuf->st_gid = 0;
+    stbuf->st_uid = uid;
+    stbuf->st_gid = gid;
     /* stbuf-st_rdev is irrelevant. */
     stbuf->st_size = 0;
     /* stbuf->st_blksize is ignored. */
@@ -31,7 +31,7 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
     stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
 
     if (!strcmp("/", path)) {
-        stbuf->st_mode = S_IFDIR;
+        stbuf->st_mode = S_IFDIR|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
         stbuf->st_nlink = 1;
     } else {
         int i;

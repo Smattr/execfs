@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "entry.h"
@@ -24,6 +25,12 @@ static int debug = 0;
 /* Entries to present to the user in the mount point. */
 entry_t **entries = NULL;
 size_t entries_sz = 0;
+
+/* Identity of the mounter. This will become the owner of all entries in the
+ * mount point.
+ */
+uid_t uid;
+gid_t gid;
 
 /* Debugging functions. */
 static void debug_dump_entries(void) {
@@ -125,6 +132,10 @@ int main(int argc, char **argv) {
     if (debug) {
         debug_dump_entries();
     }
+
+    /* Set the owner of the mount point entries. */
+    uid = geteuid();
+    gid = getegid();
 
     /* Adjust arguments to hide any that we handled from FUSE. */
     --last_arg;

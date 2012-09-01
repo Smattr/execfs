@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -120,7 +121,26 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
         return -EACCES;
     }
 
+    assert(fi != NULL);
+    /* TODO: rw pipes. */
+    fi->fh = (uint64_t)popen(e->command, fi->flags & O_RDONLY ? "r" : "w");
+    if (fi->fh == 0) {
+        return -EBADF;
+    }
+
     return 0;
+}
+
+static int exec_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+    entry_t *e = find_entry(path);
+    if (e == NULL) {
+        return -ENOENT;
+    }
+
+    assert(fi != NULL);
+    assert(fi->fh != 0);
+    size_t sz = read(fi->fh, buf, size);
+    return sz;
 }
 
 static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
@@ -138,7 +158,18 @@ static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
     return 0;
 }
 
+static int exec_release(const char *path, struct fuse_file_info *fi) {
+    assert(is_root(path) || find_entry(path) != NULL);
+    assert(fi != NULL);
+    assert(fi->fh != 0);
+    (void)pclose((FILE*)fi->fh);
+    return 0;
+}
+
 struct fuse_operations ops = {
     .getattr = &exec_getattr,
+    .open = &exec_open,
+    .read = &exec_read,
     .readdir = &exec_readdir,
+    .release = &exec_release,
 };

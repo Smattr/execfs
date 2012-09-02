@@ -183,11 +183,13 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
+#define OP(func) .func = &exec_ ## func
 struct fuse_operations ops = {
-    .destroy = &exec_destroy,
-    .getattr = &exec_getattr,
-    .open = &exec_open,
-    .read = &exec_read,
-    .readdir = &exec_readdir,
-    .release = &exec_release,
+    OP(destroy),
+    OP(getattr),
+    OP(open),
+    OP(read),
+    OP(readdir),
+    OP(release),
 };
+#undef OP

@@ -189,6 +189,7 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
         return -EACCES; \
     }
 FAIL_STUB(chmod, mode_t mode); /* Edit the config file to change permissions. */
+FAIL_STUB(chown, uid_t uid, gid_t gid);
 FAIL_STUB(link, const char *target);
 FAIL_STUB(mkdir, mode_t mode); /* Subdirectories not supported. */
 FAIL_STUB(mknod, mode_t mode, dev_t dev);
@@ -202,6 +203,7 @@ FAIL_STUB(unlink); /* Edit the config file to remove entries. */
 #define OP(func) .func = &exec_ ## func
 struct fuse_operations ops = {
     OP(chmod),
+    OP(chown),
     OP(destroy),
     OP(getattr),
     OP(link),

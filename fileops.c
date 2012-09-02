@@ -183,6 +183,15 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
+static int exec_truncate(const char *path, off_t size) {
+    if (!is_root(path) && find_entry(path) == NULL) {
+        return -ENOENT;
+    }
+
+    /* Truncation has no meaning for this file system. */
+    return 0;
+}
+
 #define FAIL_STUB(func, args...) \
     static int exec_ ## func(const char *path , ## args) { \
         LOG("Fail stubbed function %s called on %s", __func__, path); \
@@ -217,6 +226,7 @@ struct fuse_operations ops = {
     OP(rename),
     OP(rmdir),
     OP(symlink),
+    OP(truncate),
     OP(unlink),
 };
 #undef OP

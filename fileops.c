@@ -183,6 +183,21 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
+static int exec_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+    assert(fi != NULL);
+    assert(fi->fh != 0);
+
+    LOG("write called on %s (popen handle %p)", path, (FILE*)fi->fh);
+
+    size_t sz = fwrite(buf, 1, size, (FILE*)fi->fh);
+    if (sz == -1) {
+        LOG("write to %s failed with error %d", path, errno);
+    } else {
+        LOG("write to %s of %d bytes", path, sz);
+    }
+    return sz;
+}
+
 #define FAIL_STUB(func, args...) \
     static int exec_ ## func(const char *path , ## args) { \
         LOG("Fail stubbed function %s called on %s", __func__, path); \
@@ -231,5 +246,6 @@ struct fuse_operations ops = {
     OP(truncate),
     OP(unlink),
     OP(utime),
+    OP(write),
 };
 #undef OP

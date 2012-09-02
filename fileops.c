@@ -267,6 +267,7 @@ struct fuse_operations ops = {
     /* No need to implement create as open gets be called instead. */
     OP(destroy),
     OP(flush),
+    /* No need to implement ftruncate as truncate gets called instead. */
     OP(fsync),
     OP(fsyncdir),
     OP(getattr),

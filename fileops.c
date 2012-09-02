@@ -21,12 +21,6 @@
 
 #define RIGHTS_MASK 0x3
 
-#define FAIL_STUB(func, args...) \
-    static int exec_ ## func(const char *path , ## args) { \
-        LOG("Fail stubbed function %s called on %s", __func__, path); \
-        return -EACCES; \
-    }
-
 static int is_root(const char *path) {
     return !strcmp("/", path);
 }
@@ -189,11 +183,18 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
+#define FAIL_STUB(func, args...) \
+    static int exec_ ## func(const char *path , ## args) { \
+        LOG("Fail stubbed function %s called on %s", __func__, path); \
+        return -EACCES; \
+    }
 FAIL_STUB(mkdir, mode_t mode); /* Subdirectories not supported. */
 FAIL_STUB(mknod, mode_t mode, dev_t dev);
 FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
 FAIL_STUB(rename, const char *new_name);
+FAIL_STUB(rmdir);
 FAIL_STUB(unlink); /* Edit the config file to remove entries. */
+#undef FAIL_STUB
 
 #define OP(func) .func = &exec_ ## func
 struct fuse_operations ops = {
@@ -207,6 +208,7 @@ struct fuse_operations ops = {
     OP(readlink),
     OP(release),
     OP(rename),
+    OP(rmdir),
     OP(unlink),
 };
 #undef OP

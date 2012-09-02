@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "entry.h"
 
 #define BIT(n) (1UL << (n))
 #define R BIT(2)

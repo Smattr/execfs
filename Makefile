@@ -18,9 +18,9 @@ execfs: main.o config.o fileops.o
 	@echo " [LD] $@"
 	${Q}gcc -Wall ${WERROR} -o $@ $^ ${FUSE_ARGS}
 
-main.o: entry.h config.h fileops.h
+main.o: entry.h config.h fileops.h globals.h
 config.o: entry.h config.h
-fileops.o: entry.h fileops.h
+fileops.o: entry.h fileops.h globals.h
 
 %.o: %.c
 	@echo " [CC] $@"

@@ -18,10 +18,4 @@ typedef struct {
     char *command;
 } entry_t;
 
-extern entry_t **entries;
-extern size_t entries_sz;
-
-extern uid_t uid;
-extern gid_t gid;
-
 #endif

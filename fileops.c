@@ -11,6 +11,7 @@
 
 #include "entry.h"
 #include "fileops.h"
+#include "globals.h"
 
 #define BIT(n) (1UL << (n))
 #define R BIT(2)

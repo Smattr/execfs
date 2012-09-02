@@ -15,6 +15,7 @@
 #include "config.h"
 #include "entry.h"
 #include "fileops.h"
+#include "globals.h"
 
 /* Configuration file to read. */
 static char *config_filename = NULL;

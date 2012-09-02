@@ -257,6 +257,7 @@ FAIL_STUB(symlink, const char *target);
 NOP_STUB(truncate, off_t size);
 FAIL_STUB(unlink); /* Edit the config file to remove entries. */
 NOP_STUB(utime, struct utimbuf *buf);
+NOP_STUB(utimens, const struct timespec tv[2]);
 #undef FAIL_STUB
 #undef NOP_STUB
 
@@ -289,6 +290,7 @@ struct fuse_operations ops = {
     OP(truncate),
     OP(unlink),
     OP(utime),
+    OP(utimens),
     OP(write),
 };
 #undef OP

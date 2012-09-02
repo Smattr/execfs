@@ -272,6 +272,7 @@ struct fuse_operations ops = {
     OP(fsyncdir),
     OP(getattr),
     OP(link),
+    /* No need to implement lock. Let the kernel handle flocking. */
     OP(mkdir),
     OP(mknod),
     OP(open),

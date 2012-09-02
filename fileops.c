@@ -21,6 +21,12 @@
 
 #define RIGHTS_MASK 0x3
 
+#define FAIL_STUB(func, args...) \
+    static int exec_ ## func(const char *path , ## args) { \
+        LOG("Fail stubbed function %s called on %s", __func__, path); \
+        return -EACCES; \
+    }
+
 static int is_root(const char *path) {
     return !strcmp("/", path);
 }
@@ -183,6 +189,8 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
+FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
+
 #define OP(func) .func = &exec_ ## func
 struct fuse_operations ops = {
     OP(destroy),
@@ -190,6 +198,7 @@ struct fuse_operations ops = {
     OP(open),
     OP(read),
     OP(readdir),
+    OP(readlink),
     OP(release),
 };
 #undef OP

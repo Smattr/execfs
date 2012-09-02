@@ -264,6 +264,7 @@ NOP_STUB(utime, struct utimbuf *buf);
 struct fuse_operations ops = {
     OP(chmod),
     OP(chown),
+    /* No need to implement create as open gets be called instead. */
     OP(destroy),
     OP(flush),
     OP(fsync),

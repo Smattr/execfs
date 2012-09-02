@@ -207,6 +207,7 @@ FAIL_STUB(rmdir);
 FAIL_STUB(symlink, const char *target);
 NOP_STUB(truncate, off_t size);
 FAIL_STUB(unlink); /* Edit the config file to remove entries. */
+NOP_STUB(utime, struct utimbuf *buf);
 #undef FAIL_STUB
 #undef NOP_STUB
 
@@ -229,5 +230,6 @@ struct fuse_operations ops = {
     OP(symlink),
     OP(truncate),
     OP(unlink),
+    OP(utime),
 };
 #undef OP

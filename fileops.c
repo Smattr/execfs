@@ -264,6 +264,7 @@ NOP_STUB(utimens, const struct timespec tv[2]);
 
 #define OP(func) .func = &exec_ ## func
 struct fuse_operations ops = {
+    .flag_nullpath_ok = 0, /* Don't accept NULL paths. */
     OP(bmap),
     OP(chmod),
     OP(chown),

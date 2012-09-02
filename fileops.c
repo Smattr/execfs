@@ -143,7 +143,7 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
 static int exec_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     assert(fi != NULL);
     assert(fi->fh != 0);
-    size_t sz = read(fi->fh, buf, size);
+    size_t sz = fread(buf, 1, size, (FILE*)fi->fh);
     return sz;
 }
 

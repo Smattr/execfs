@@ -249,6 +249,7 @@ FAIL_STUB(mknod, mode_t mode, dev_t dev);
 FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
 FAIL_STUB(rename, const char *new_name);
 FAIL_STUB(rmdir);
+FAIL_STUB(removexattr, const char *name);
 FAIL_STUB(setxattr, const char *name, const char *value, size_t size, int flags);
 FAIL_STUB(symlink, const char *target);
 NOP_STUB(truncate, off_t size);
@@ -273,6 +274,7 @@ struct fuse_operations ops = {
     OP(readdir),
     OP(readlink),
     OP(release),
+    OP(removexattr),
     OP(rename),
     OP(rmdir),
     OP(setxattr),

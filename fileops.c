@@ -183,19 +183,18 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
-static int exec_truncate(const char *path, off_t size) {
-    if (!is_root(path) && find_entry(path) == NULL) {
-        return -ENOENT;
-    }
-
-    /* Truncation has no meaning for this file system. */
-    return 0;
-}
-
 #define FAIL_STUB(func, args...) \
     static int exec_ ## func(const char *path , ## args) { \
         LOG("Fail stubbed function %s called on %s", __func__, path); \
         return -EACCES; \
+    }
+#define NOP_STUB(func, args...) \
+    static int exec_ ## func(const char *path , ## args) { \
+        LOG("No-op stubbed function %s called on %s", __func__, path); \
+        if (!is_root(path) && find_entry(path) == NULL) { \
+            return -ENOENT; \
+        } \
+        return 0; \
     }
 FAIL_STUB(chmod, mode_t mode); /* Edit the config file to change permissions. */
 FAIL_STUB(chown, uid_t uid, gid_t gid);
@@ -206,8 +205,10 @@ FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
 FAIL_STUB(rename, const char *new_name);
 FAIL_STUB(rmdir);
 FAIL_STUB(symlink, const char *target);
+NOP_STUB(truncate, off_t size);
 FAIL_STUB(unlink); /* Edit the config file to remove entries. */
 #undef FAIL_STUB
+#undef NOP_STUB
 
 #define OP(func) .func = &exec_ ## func
 struct fuse_operations ops = {

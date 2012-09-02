@@ -21,16 +21,15 @@
 
 #define RIGHTS_MASK 0x3
 
+static int is_root(const char *path) {
+    return !strcmp("/", path);
+}
+
 /* Note: doing a linear search on the entries array is not an efficient way of
  * implementing a file system that will be under heavy load, but we assume that
  * there will be few entries in the file system and these will not be accessed
  * frequently.
  */
-
-static int is_root(const char *path) {
-    return !strcmp("/", path);
-}
-
 static entry_t *find_entry(const char *path) {
     if (path[0] != '/') {
         /* We were passed a path outside this mount point (?) */

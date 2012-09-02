@@ -189,6 +189,7 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
+FAIL_STUB(mkdir, mode_t mode);
 FAIL_STUB(mknod, mode_t mode, dev_t dev);
 FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
 
@@ -196,6 +197,7 @@ FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
 struct fuse_operations ops = {
     OP(destroy),
     OP(getattr),
+    OP(mkdir),
     OP(mknod),
     OP(open),
     OP(read),

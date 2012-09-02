@@ -241,6 +241,7 @@ static int exec_write(const char *path, const char *buf, size_t size, off_t offs
         } \
         return 0; \
     }
+FAIL_STUB(bmap, size_t blocksize, uint64_t *idx);
 FAIL_STUB(chmod, mode_t mode); /* Edit the config file to change permissions. */
 FAIL_STUB(chown, uid_t uid, gid_t gid);
 NOP_STUB(fsyncdir, int datasync, struct fuse_file_info *fi);
@@ -263,6 +264,7 @@ NOP_STUB(utimens, const struct timespec tv[2]);
 
 #define OP(func) .func = &exec_ ## func
 struct fuse_operations ops = {
+    OP(bmap),
     OP(chmod),
     OP(chown),
     /* No need to implement create as open gets be called instead. */

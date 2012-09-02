@@ -2,6 +2,7 @@
 #define _EXECFS_GLOBALS_H_
 
 #include <stddef.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include "entry.h"

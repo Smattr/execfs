@@ -14,13 +14,14 @@ else
 WERROR:=-Werror
 endif
 
-execfs: main.o config.o fileops.o
+execfs: main.o config.o fileops.o log.o
 	@echo " [LD] $@"
 	${Q}gcc -Wall ${WERROR} -o $@ $^ ${FUSE_ARGS}
 
-main.o: entry.h config.h fileops.h globals.h
+main.o: entry.h config.h fileops.h log.h globals.h
 config.o: entry.h config.h
 fileops.o: entry.h fileops.h globals.h
+log.o: log.h
 
 %.o: %.c
 	@echo " [CC] $@"

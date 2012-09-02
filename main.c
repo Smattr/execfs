@@ -16,6 +16,7 @@
 #include "entry.h"
 #include "fileops.h"
 #include "globals.h"
+#include "log.h"
 
 /* Configuration file to read. */
 static char *config_filename = NULL;
@@ -62,6 +63,7 @@ static int parse_args(int argc, char **argv, int *last) {
         {"debug", no_argument, &debug, 1},
         {"config", required_argument, 0, 'c'},
         {"fuse", no_argument, 0, 'f'},
+        {"log", required_argument, 0, 'l'},
         {0, 0, 0, 0},
     };
     int index;
@@ -93,6 +95,12 @@ static int parse_args(int argc, char **argv, int *last) {
                 assert(last != NULL);
                 *last = optind;
                 return 0;
+            } case 'l': {
+                if (log_open(optarg) != 0) {
+                    fprintf(stderr, "Failed to open log file %s\n", optarg);
+                    return -1;
+                }
+                break;
             } default: {
                 fprintf(stderr, "Unrecognised argument: %c\n", optopt);
                 errno = EINVAL;

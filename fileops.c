@@ -12,6 +12,7 @@
 #include "entry.h"
 #include "fileops.h"
 #include "globals.h"
+#include "log.h"
 
 #define BIT(n) (1UL << (n))
 #define R BIT(2)
@@ -61,6 +62,10 @@ static unsigned int access_rights(entry_t *entry) {
             | (entry->o_x ? X : 0);
     }
     return rights;
+}
+
+static void exec_destroy(void *private_data) {
+    log_close();
 }
 
 static int exec_getattr(const char *path, struct stat *stbuf) {
@@ -168,6 +173,7 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
 }
 
 struct fuse_operations ops = {
+    .destroy = &exec_destroy,
     .getattr = &exec_getattr,
     .open = &exec_open,
     .read = &exec_read,

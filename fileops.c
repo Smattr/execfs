@@ -243,6 +243,7 @@ static int exec_write(const char *path, const char *buf, size_t size, off_t offs
     }
 FAIL_STUB(chmod, mode_t mode); /* Edit the config file to change permissions. */
 FAIL_STUB(chown, uid_t uid, gid_t gid);
+NOP_STUB(fsyncdir, int datasync, struct fuse_file_info *fi);
 FAIL_STUB(link, const char *target);
 FAIL_STUB(mkdir, mode_t mode); /* Subdirectories not supported. */
 FAIL_STUB(mknod, mode_t mode, dev_t dev);
@@ -266,6 +267,7 @@ struct fuse_operations ops = {
     OP(destroy),
     OP(flush),
     OP(fsync),
+    OP(fsyncdir),
     OP(getattr),
     OP(link),
     OP(mkdir),

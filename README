@@ -5,7 +5,7 @@ All files in this repository are licensed under a Creative Commons Attribution-N
 
 The best way of explaining what you are looking at is a FUSE file system that turns open() into popen(). I found I needed this for programs that did not have expressive enough input syntax/macros for their configuration/input files. I'm not sure what purpose you would like to put it to, but I'm sure you can come up with something.
 
-This is a work in progress currently and not particularly functional. All the usual disclaimers apply; I take no responsibility if running this code causes your computer to explode. Apologies for the sparse documentation. More will be forthcoming.
+This is a work in progress currently and not particularly functional. I wrote most of this in a hurry so there are almost certainly a few sharp edges. All the usual disclaimers apply; I take no responsibility if running this code causes your computer to explode. Apologies for the sparse documentation. More will be forthcoming.
 
 If you find any bugs or would like other features added just let me know via the issue tracker and I'll get back to you as soon as I can.
 

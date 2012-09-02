@@ -193,6 +193,7 @@ FAIL_STUB(mknod, mode_t mode, dev_t dev);
 FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
 FAIL_STUB(rename, const char *new_name);
 FAIL_STUB(rmdir);
+FAIL_STUB(symlink, const char *target);
 FAIL_STUB(unlink); /* Edit the config file to remove entries. */
 #undef FAIL_STUB
 
@@ -209,6 +210,7 @@ struct fuse_operations ops = {
     OP(release),
     OP(rename),
     OP(rmdir),
+    OP(symlink),
     OP(unlink),
 };
 #undef OP

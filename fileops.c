@@ -188,6 +188,7 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
         LOG("Fail stubbed function %s called on %s", __func__, path); \
         return -EACCES; \
     }
+FAIL_STUB(link, const char *target);
 FAIL_STUB(mkdir, mode_t mode); /* Subdirectories not supported. */
 FAIL_STUB(mknod, mode_t mode, dev_t dev);
 FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
@@ -201,6 +202,7 @@ FAIL_STUB(unlink); /* Edit the config file to remove entries. */
 struct fuse_operations ops = {
     OP(destroy),
     OP(getattr),
+    OP(link),
     OP(mkdir),
     OP(mknod),
     OP(open),

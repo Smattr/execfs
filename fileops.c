@@ -19,6 +19,8 @@
 #define W BIT(1)
 #define X BIT(0)
 
+#define RIGHTS_MASK 0x3
+
 /* Note: doing a linear search on the entries array is not an efficient way of
  * implementing a file system that will be under heavy load, but we assume that
  * there will be few entries in the file system and these will not be accessed
@@ -120,16 +122,17 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
         return -ENOENT;
     }
 
-    unsigned int rights = access_rights(e);
+    assert(fi != NULL);
+    unsigned int entry_rights = access_rights(e);
+    unsigned int rights = fi->flags & RIGHTS_MASK;
 
-    if ((fi->flags & O_RDONLY && !(rights & R)) ||
-        (fi->flags & O_WRONLY && !(rights & W))) {
+    if (((rights == O_RDONLY || rights == O_RDWR) && !(entry_rights & R)) ||
+        ((rights == O_WRONLY || rights == O_RDWR) && !(entry_rights & W))) {
         return -EACCES;
     }
 
-    assert(fi != NULL);
     /* TODO: rw pipes. */
-    fi->fh = (uint64_t)popen(e->command, fi->flags & O_RDONLY ? "r" : "w");
+    fi->fh = (uint64_t)popen(e->command, rights == O_RDONLY ? "r" : "w");
     if (fi->fh == 0) {
         return -EBADF;
     }

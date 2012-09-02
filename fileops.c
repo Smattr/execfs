@@ -131,11 +131,17 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
         return -EACCES;
     }
 
+    LOG("Opening %s (%s) for %s", path, e->command,
+        rights == O_RDONLY ? "read" :
+        rights == O_WRONLY ? "write" : "read/write");
+
     /* TODO: rw pipes. */
     fi->fh = (uint64_t)popen(e->command, rights == O_RDONLY ? "r" : "w");
     if (fi->fh == 0) {
+        LOG("Failed to popen %s", e->command);
         return -EBADF;
     }
+    LOG("Handle %p returned from popen", (FILE*)fi->fh);
 
     return 0;
 }
@@ -143,7 +149,15 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
 static int exec_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     assert(fi != NULL);
     assert(fi->fh != 0);
+
+    LOG("read called on %s (popen handle %p)", path, (FILE*)fi->fh);
+
     size_t sz = fread(buf, 1, size, (FILE*)fi->fh);
+    if (sz == -1) {
+        LOG("read from %s failed with error %d", path, errno);
+    } else {
+        LOG("read from %s returned %d bytes", path, sz);
+    }
     return sz;
 }
 

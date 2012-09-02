@@ -84,6 +84,21 @@ static int exec_flush(const char *path, struct fuse_file_info *fi) {
     return fflush((FILE*)fi->fh);
 }
 
+static int exec_fsync(const char *path, int datasync, struct fuse_file_info *fi) {
+    if (is_root(path)) {
+        return 0;
+    }
+
+    entry_t *e = find_entry(path);
+    if (e == NULL) {
+        return -ENOENT;
+    }
+
+    assert(fi != NULL);
+    assert(fi->fh != 0);
+    return fsync(fileno((FILE*)fi->fh));
+}
+
 static int exec_getattr(const char *path, struct stat *stbuf) {
     assert(stbuf != NULL);
 
@@ -247,6 +262,7 @@ struct fuse_operations ops = {
     OP(chown),
     OP(destroy),
     OP(flush),
+    OP(fsync),
     OP(getattr),
     OP(link),
     OP(mkdir),

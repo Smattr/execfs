@@ -247,9 +247,10 @@ FAIL_STUB(link, const char *target);
 FAIL_STUB(mkdir, mode_t mode); /* Subdirectories not supported. */
 FAIL_STUB(mknod, mode_t mode, dev_t dev);
 FAIL_STUB(readlink, char *buf, size_t size); /* Symlinks not supported. */
+NOP_STUB(releasedir, struct fuse_file_info *fi);
+FAIL_STUB(removexattr, const char *name);
 FAIL_STUB(rename, const char *new_name);
 FAIL_STUB(rmdir);
-FAIL_STUB(removexattr, const char *name);
 FAIL_STUB(setxattr, const char *name, const char *value, size_t size, int flags);
 FAIL_STUB(symlink, const char *target);
 NOP_STUB(truncate, off_t size);
@@ -274,6 +275,7 @@ struct fuse_operations ops = {
     OP(readdir),
     OP(readlink),
     OP(release),
+    OP(releasedir),
     OP(removexattr),
     OP(rename),
     OP(rmdir),

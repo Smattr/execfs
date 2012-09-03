@@ -1,12 +1,61 @@
 All files in this repository are licensed under a Creative Commons Attribution-NonCommercial 3.0 Unported. You are free to reuse any of this code for any non-commercial purpose. For more information see https://creativecommons.org/licenses/by-nc/3.0/. I'm a pretty accommodating guy, so if you want to do something with this code that is not covered in the licence just ask me.
 
-
 ~~
 
-The best way of explaining what you are looking at is a FUSE file system that turns open() into popen(). I found I needed this for programs that did not have expressive enough input syntax/macros for their configuration/input files. I'm not sure what purpose you would like to put it to, but I'm sure you can come up with something.
+The best way of explaining what you are looking at may be: a FUSE file system that turns open() into popen(). I found I needed this for programs that did not have expressive enough input syntax/macros for their configuration/input files. I'm not sure what purpose you would like to put it to, but I'm sure you can come up with something.
 
-This is a work in progress currently and not particularly functional. I wrote most of this in a hurry so there are almost certainly a few sharp edges. All the usual disclaimers apply; I take no responsibility if running this code causes your computer to explode. Apologies for the sparse documentation. More will be forthcoming.
+This is a work in progress currently and not necessarily fully functional. I wrote most of it in a hurry so there are almost certainly a few sharp edges. All the usual disclaimers apply; I take no responsibility if running this code causes your computer to explode. Apologies for the sparse documentation. More will be forthcoming.
 
 If you find any bugs or would like other features added just let me know via the issue tracker and I'll get back to you as soon as I can.
 
 Matthew Fernandez <matthew.fernandez@gmail.com>
+
+~~
+
+* Compiling *
+-------------
+
+`make` should take care of everything. You will need libfuse-dev installed.
+
+* Usage *
+---------
+
+The first thing you need to do is construct a configuration file that describes the fake files you want execfs to present to you. The configuration file contains lines of the form "path|permissions|command". Path is the filename you want presented by execfs in your file system. Permissions should be a chmod numerical representation of the permissions you want the file to have. Command is the command you want executed when you open the file. A sample configuration might look like the following:
+
+ my_file.txt|644|echo "hello world"
+
+Now you need a directory where you want to mount this configuration. Suppose you have an empty directory "/home/alice/test" and you saved the configuration file above as "/home/alice/conf". Run the following to mount it:
+
+ execfs --config /home/alice/conf --fuse /home/alice/test
+
+Now if you run `mount` you should see the directory /home/alice/test listed. Run `ls -l /home/alice/test` and you should see the following:
+
+ total 0
+ -rw-r--r-- 1 alice alice 1024 Sep  3 21:24 my_file.txt
+
+Now let's see what this code actually does for us. Run `cat /home/alice/test/my_file.txt` and you should see the output:
+
+ hello world
+
+So what just happened there...? We executed a program that opened /home/alice/test/my_file.txt for reading and, instead of opening a file, `echo "hello world"` was executed and the content that it printed to stdout was returned as the contents of the file. Hopefully now your imagination is running wild with the uses (and abuses) you could put this to.
+
+Use `fusermount -u /home/alice/test` to unmount the file system. Run `execfs --help` for some more command line options.
+
+(See the TODO list at the bottom for some caveats that will be fixed in a future version.)
+
+* Modifying *
+-------------
+
+Want to hack on this code? Go right ahead. The "interesting" guts of it are in fileops.c as marked. If you have any questions I'm happy to answer them :)
+
+~~
+
+* TODOs *
+---------
+
+ - The configuration file has no comment syntax. #-prefixed lines would be nice. In fact the parsing of the configuration file is pretty limited all over. A line containing only whitespace is considered malformed.
+ - Some sort of escaping syntax for the pipe symbol in the configuration file would be nice.
+ - Just noticed that ls -l shows "total 0". This isn't really correct and is probably related to what getattr() (or statvfs?) is doing. Fix this.
+ - Writing to an execfs-hosted file has not been tested well at all. It potentially has many problems that should be ironed out by me before they bite a poor user.
+ - Read/write files (stdin and stdout connected) aren't supported at all currently. Some nice popen/dup2 magic needs to be done for this.
+ - There are some remaining file system functions not implemented. I'm guessing anything that invokes these gets a nasty unimplemented FUSE error.

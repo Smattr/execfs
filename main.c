@@ -63,13 +63,14 @@ static int parse_args(int argc, char **argv, int *last) {
         {"debug", no_argument, &debug, 1},
         {"config", required_argument, 0, 'c'},
         {"fuse", no_argument, 0, 'f'},
+        {"help", no_argument, 0, '?'},
         {"log", required_argument, 0, 'l'},
         {0, 0, 0, 0},
     };
     int index;
     int c;
 
-    while ((c = getopt_long(argc, argv, "dc:f", options, &index)) != -1) {
+    while ((c = getopt_long(argc, argv, "dc:f?", options, &index)) != -1) {
         switch (c) {
             case 0: {
                 /* This should have set a flag. */
@@ -101,6 +102,19 @@ static int parse_args(int argc, char **argv, int *last) {
                     return -1;
                 }
                 break;
+            } case '?': {
+                printf("Usage: %s options -f fuse_options\n"
+                       " -c, --config FILE     Read configuration from the given file. This argument\n"
+                       "                       is required.\n"
+                       " -d, --debug           Enable debugging output on startup.\n"
+                       " -f, --fuse            Any arguments following this are interpreted as\n"
+                       "                       arguments to be passed through to FUSE. This argument\n"
+                       "                       must be used to terminate your execfs argument list.\n"
+                       " -?, --help            Print this usage information.\n"
+                       " -l, --log FILE        Write logging information to FILE. Without this\n"
+                       "                       argument no logging is performed.\n",
+                       argv[0]);
+                exit(0);
             } default: {
                 fprintf(stderr, "Unrecognised argument: %c\n", optopt);
                 errno = EINVAL;
@@ -123,8 +137,7 @@ int main(int argc, char **argv) {
     }
 
     if (config_filename == NULL) {
-        fprintf(stderr, "No configuration file specified.\n"
-                        "Usage: %s [--debug] --config filename --fuse fuse_arguments...\n", argv[0]);
+        fprintf(stderr, "No configuration file specified.\n");
         return -1;
     }
 

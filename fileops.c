@@ -1,3 +1,5 @@
+/* Implementations of all the FUSE operations for this file system. */
+
 /* Use newer version of FUSE API. */
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
@@ -21,6 +23,7 @@
 
 #define RIGHTS_MASK 0x3
 
+/* Whether this path is the root of the mount point. */
 static int is_root(const char *path) {
     return !strcmp("/", path);
 }
@@ -45,6 +48,9 @@ static entry_t *find_entry(const char *path) {
     return NULL;
 }
 
+/* Determine the permissions of a given file in the context of the user
+ * currently operating on it.
+ */
 static unsigned int access_rights(entry_t *entry) {
     struct fuse_context *context = fuse_get_context();
     unsigned int rights;
@@ -65,6 +71,7 @@ static unsigned int access_rights(entry_t *entry) {
     return rights;
 }
 
+/* Called when the file system is unmounted. */
 static void exec_destroy(void *private_data) {
     log_close();
 }
@@ -99,21 +106,32 @@ static int exec_fsync(const char *path, int datasync, struct fuse_file_info *fi)
     return fsync(fileno((FILE*)fi->fh));
 }
 
+/* Start of "interesting" code. The guts of the implementation are below in
+ * exec_getattr(), exec_open(), exec_read() and exec_write().
+ */
+
 static int exec_getattr(const char *path, struct stat *stbuf) {
     assert(stbuf != NULL);
 
     /* stbuf->st_dev is ignored. */
     /* stbuf->st_ino is ignored. */
+
+    /* Mark every entry as owned by the mounter. */
     stbuf->st_uid = uid;
     stbuf->st_gid = gid;
+
     /* stbuf-st_rdev is irrelevant. */
     /* stbuf->st_blksize is ignored. */
     /* stbuf->st_blocks is ignored. */
+
+    /* The current time is as good as any considering any process reading this
+     * file may encounter different data to last time.
+     */
     stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
 
     if (is_root(path)) {
         stbuf->st_mode = S_IFDIR|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
-        stbuf->st_size = 0;
+        stbuf->st_size = 0; /* FIXME: This should be set more appropriately. */
         stbuf->st_nlink = 1;
     } else {
         entry_t *e = find_entry(path);
@@ -228,6 +246,7 @@ static int exec_write(const char *path, const char *buf, size_t size, off_t offs
     return sz;
 }
 
+/* Stub out all the irrelevant functions. */
 #define FAIL_STUB(func, args...) \
     static int exec_ ## func(const char *path , ## args) { \
         LOG("Fail stubbed function %s called on %s", __func__, path); \
@@ -265,21 +284,29 @@ NOP_STUB(utimens, const struct timespec tv[2]);
 #define OP(func) .func = &exec_ ## func
 struct fuse_operations ops = {
     .flag_nullpath_ok = 0, /* Don't accept NULL paths. */
+    // TODO access
     OP(bmap),
     OP(chmod),
     OP(chown),
     /* No need to implement create as open gets be called instead. */
     OP(destroy),
+    // TODO fgetattr
     OP(flush),
     /* No need to implement ftruncate as truncate gets called instead. */
     OP(fsync),
     OP(fsyncdir),
     OP(getattr),
+    // TODO getxattr
+    // TODO init
+    // TODO ioctl
     OP(link),
+    // TODO listxattr
     /* No need to implement lock. Let the kernel handle flocking. */
     OP(mkdir),
     OP(mknod),
     OP(open),
+    // TODO opendir
+    // TODO poll
     OP(read),
     OP(readdir),
     OP(readlink),
@@ -289,6 +316,7 @@ struct fuse_operations ops = {
     OP(rename),
     OP(rmdir),
     OP(setxattr),
+    // TODO statfs
     OP(symlink),
     OP(truncate),
     OP(unlink),

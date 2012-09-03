@@ -1,3 +1,5 @@
+/* Configuration reading and parsing. */
+
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>

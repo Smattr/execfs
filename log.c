@@ -1,3 +1,5 @@
+/* Logging functionality. Mainly useful for debugging. */
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

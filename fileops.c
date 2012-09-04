@@ -89,10 +89,12 @@ static unsigned int access_rights(entry_t *entry) {
 
 /* Called when the file system is unmounted. */
 static void exec_destroy(void *private_data) {
+    LOG("destroy called (unmounting file system)");
     log_close();
 }
 
 static int exec_flush(const char *path, struct fuse_file_info *fi) {
+    LOG("flush called on %s with handle %llu", path, fi->fh);
     if (is_root(path)) {
         return 0;
     }
@@ -108,6 +110,7 @@ static int exec_flush(const char *path, struct fuse_file_info *fi) {
 }
 
 static int exec_fsync(const char *path, int datasync, struct fuse_file_info *fi) {
+    LOG("fsync called on %s (%s)", path, datasync ? "datasync" : "metadata only");
     if (is_root(path)) {
         return 0;
     }
@@ -127,6 +130,7 @@ static int exec_fsync(const char *path, int datasync, struct fuse_file_info *fi)
  */
 
 static int exec_getattr(const char *path, struct stat *stbuf) {
+    LOG("getattr called on %s", path);
     assert(stbuf != NULL);
 
     /* stbuf->st_dev is ignored. */
@@ -177,12 +181,13 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
 }
 
 static int exec_open(const char *path, struct fuse_file_info *fi) {
+    assert(fi != NULL);
+    LOG("open called on %s with flags %d", path, fi->flags);
     entry_t *e = find_entry(path);
     if (e == NULL) {
         return -ENOENT;
     }
 
-    assert(fi != NULL);
     unsigned int entry_rights = access_rights(e);
     unsigned int rights = fi->flags & RIGHTS_MASK;
 
@@ -208,9 +213,7 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
 
 static int exec_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     assert(fi != NULL);
-    assert(fi->fh != 0);
-
-    LOG("read called on %s (popen handle %p)", path, (FILE*)fi->fh);
+    LOG("read of %d bytes from %s with handle %llu", size, path, fi->fh);
 
     size_t sz = fread(buf, 1, size, (FILE*)fi->fh);
     if (sz == -1) {
@@ -222,6 +225,7 @@ static int exec_read(const char *path, char *buf, size_t size, off_t offset, str
 }
 
 static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+    LOG("readdir called on %s", path);
     if (!is_root(path)) {
         /* Don't support subdirectories. */
         return -EBADF;
@@ -237,8 +241,9 @@ static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 }
 
 static int exec_release(const char *path, struct fuse_file_info *fi) {
-    assert(is_root(path) || find_entry(path) != NULL);
     assert(fi != NULL);
+    LOG("Releasing %s with handle %llu", path, fi->fh);
+    assert(is_root(path) || find_entry(path) != NULL);
     assert(fi->fh != 0);
     (void)pclose((FILE*)fi->fh);
     return 0;
@@ -246,9 +251,7 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
 
 static int exec_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     assert(fi != NULL);
-    assert(fi->fh != 0);
-
-    LOG("write called on %s (popen handle %p)", path, (FILE*)fi->fh);
+    LOG("write of %d bytes to %s with handle %llu", size, path, fi->fh);
 
     size_t sz = fwrite(buf, 1, size, (FILE*)fi->fh);
     if (sz == -1) {

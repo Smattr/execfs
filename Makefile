@@ -1,4 +1,7 @@
-FUSE_ARGS=$(shell pkg-config fuse --cflags --libs)
+FUSE_ARGS=$(shell pkg-config fuse --cflags --libs 2>/dev/null)
+ifeq (${FUSE_ARGS},)
+$(error libfuse-dev not found)
+endif
 
 default: execfs
 

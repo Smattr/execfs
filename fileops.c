@@ -4,7 +4,6 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
-#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,6 +14,23 @@
 #include "fileops.h"
 #include "globals.h"
 #include "log.h"
+
+/* All the functions in this file are invoked as FUSE callbacks, which results
+ * in assertion failures being invisible to the user. To provide meaningful
+ * assertion functionality we provide our own assert() that prints failures to
+ * the log.
+ */
+#undef assert
+#ifdef NDEBUG
+    #define assert(expr) ((void)0)
+#else
+    #define assert(expr) do { \
+        if (!(expr)) { \
+            LOG("%s:%d: %s: Assertion `%s' failed", __FILE__, __LINE__, __func__, #expr); \
+            return -1; \
+        } \
+    } while(0)
+#endif
 
 #define BIT(n) (1UL << (n))
 #define R BIT(2)

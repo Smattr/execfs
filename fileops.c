@@ -5,6 +5,7 @@
 #include <fuse.h>
 
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -104,9 +105,10 @@ static int exec_flush(const char *path, struct fuse_file_info *fi) {
         return -ENOENT;
     }
 
-    assert(fi != NULL);
-    assert(fi->fh != 0);
-    return fflush((FILE*)fi->fh);
+    /* We don't need to flush at all because reading/writing is not done via
+     * streams.
+     */
+    return 0;
 }
 
 static int exec_fsync(const char *path, int datasync, struct fuse_file_info *fi) {
@@ -120,9 +122,10 @@ static int exec_fsync(const char *path, int datasync, struct fuse_file_info *fi)
         return -ENOENT;
     }
 
-    assert(fi != NULL);
-    assert(fi->fh != 0);
-    return fsync(fileno((FILE*)fi->fh));
+    /* Like flush, no need to do anything for fsync because we are doing
+     * unbuffered I/O.
+     */
+    return 0;
 }
 
 /* Start of "interesting" code. The guts of the implementation are below in
@@ -200,13 +203,36 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
         rights == O_RDONLY ? "read" :
         rights == O_WRONLY ? "write" : "read/write");
 
+/* We're about to pack two file descriptors (ints) into a uint64_t, so let's
+ * check (at compile time) that they'll actually fit.
+ */
+typedef char _two_ints_fit_in_a_uint64_t
+    [sizeof(uint64_t) >= 2 * sizeof(int) ? 1 : -1];
+
     /* TODO: rw pipes. */
-    fi->fh = (uint64_t)popen(e->command, rights == O_RDONLY ? "r" : "w");
-    if (fi->fh == 0) {
-        LOG("Failed to popen %s", e->command);
-        return -EBADF;
+    /* Open the pipe and put the file descriptor in the low 32 bits of fi->fh
+     * if it's open for reading and the high 32 bits if it's open for writing.
+     * The reason for this is because we'll need two separate file descriptors
+     * to do a read/write pipe, in which case we can pack them both into
+     * fi->fh. Kind of handy that FUSE gives us 64 bits for a handle.
+     */
+    FILE *f;
+    if (rights == O_RDONLY) {
+        f = popen(e->command, "r");
+        if (f == NULL) {
+            LOG("Failed to popen %s for reading", e->command);
+            return -EBADF;
+        }
+        fi->fh = (uint64_t)fileno(f); /* Low 32 bits. */
+    } else {
+        f = popen(e->command, "w");
+        if (f == NULL) {
+            LOG("Failed to popen %s for writing", e->command);
+            return -EBADF;
+        }
+        fi->fh = ((uint64_t)fileno(f)) << 32; /* High 32 bits */
     }
-    LOG("Handle %p returned from popen", (FILE*)fi->fh);
+    LOG("Handle %llu returned from popen", fi->fh);
 
     return 0;
 }
@@ -215,7 +241,12 @@ static int exec_read(const char *path, char *buf, size_t size, off_t offset, str
     assert(fi != NULL);
     LOG("read of %d bytes from %s with handle %llu", size, path, fi->fh);
 
-    size_t sz = fread(buf, 1, size, (FILE*)fi->fh);
+    /* 0 is actually a valid file descriptor, but we know it's stdin so there's
+     * no way it can be the one we're about to read from.
+     */
+    assert(fi->fh != 0);
+    assert(size <= SSIZE_MAX); /* read() is undefined when passed >SSIZE_MAX */
+    ssize_t sz = read((int)(fi->fh & ((1ULL << 32) - 1)), buf, size);
     if (sz == -1) {
         LOG("read from %s failed with error %d", path, errno);
     } else {
@@ -245,7 +276,14 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     LOG("Releasing %s with handle %llu", path, fi->fh);
     assert(is_root(path) || find_entry(path) != NULL);
     assert(fi->fh != 0);
-    (void)pclose((FILE*)fi->fh);
+    int readfd = (int)(fi->fh & ((1ULL << 32) - 1));
+    int writefd = (int)(fi->fh >> 32);
+    if (readfd != 0) { /* File was opened for reading. */
+        (void)close(readfd);
+    }
+    if (writefd != 0) { /* File was opened for writing. */
+        (void)close(writefd);
+    }
     return 0;
 }
 
@@ -253,7 +291,9 @@ static int exec_write(const char *path, const char *buf, size_t size, off_t offs
     assert(fi != NULL);
     LOG("write of %d bytes to %s with handle %llu", size, path, fi->fh);
 
-    size_t sz = fwrite(buf, 1, size, (FILE*)fi->fh);
+    assert(fi->fh != 0);
+    assert(size <= SSIZE_MAX); /* write() is undefined when passed >SSIZE_MAX */
+    ssize_t sz = write((int)(fi->fh >> 32), buf, size);
     if (sz == -1) {
         LOG("write to %s failed with error %d", path, errno);
     } else {

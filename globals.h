@@ -13,4 +13,6 @@ extern size_t entries_sz;
 extern uid_t uid;
 extern gid_t gid;
 
+extern size_t size;
+
 #endif

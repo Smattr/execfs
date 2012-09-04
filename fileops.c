@@ -141,10 +141,7 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
 
         /* It would be nice to mark entries as FIFOs (S_IFIFO), but
          * irritatingly the kernel doesn't call FUSE handlers for FIFOs so we
-         * never get read/write calls. To further complicate matters some
-         * programs like cat attempt to be clever and stat the size of a file
-         * to see how much they should read. To get around this we need to set
-         * a reasonably large file size.
+         * never get read/write calls.
          */
         stbuf->st_mode = S_IFREG
             | (e->u_r ? S_IRUSR : 0)
@@ -156,7 +153,7 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
             | (e->o_r ? S_IROTH : 0)
             | (e->o_w ? S_IWOTH : 0)
             | (e->o_x ? S_IXOTH : 0);
-        stbuf->st_size = 1024;
+        stbuf->st_size = size;
         stbuf->st_nlink = 1;
     }
 

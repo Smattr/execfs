@@ -34,6 +34,10 @@ size_t entries_sz = 0;
 uid_t uid;
 gid_t gid;
 
+/* Size in bytes to assign to each file. */
+#define DEFAULT_SIZE (10 * 1024) /* 10 KB */
+size_t size = DEFAULT_SIZE;
+
 /* Debugging functions. */
 static void debug_dump_entries(void) {
     assert(entries_sz != PARSE_FAIL);
@@ -65,6 +69,7 @@ static int parse_args(int argc, char **argv, int *last) {
         {"fuse", no_argument, 0, 'f'},
         {"help", no_argument, 0, '?'},
         {"log", required_argument, 0, 'l'},
+        {"size", required_argument, 0, 's'},
         {0, 0, 0, 0},
     };
     int index;
@@ -99,8 +104,18 @@ static int parse_args(int argc, char **argv, int *last) {
             } case 'l': {
                 if (log_open(optarg) != 0) {
                     fprintf(stderr, "Failed to open log file %s\n", optarg);
+                    errno = EINVAL;
                     return -1;
                 }
+                break;
+            } case 's': {
+                size_t sz = atoi(optarg);
+                if (sz == 0) {
+                    fprintf(stderr, "Invalid file size %s passed\n", optarg);
+                    errno = EINVAL;
+                    return -1;
+                }
+                size = sz;
                 break;
             } case '?': {
                 printf("Usage: %s options -f fuse_options\n"
@@ -112,7 +127,13 @@ static int parse_args(int argc, char **argv, int *last) {
                        "                       must be used to terminate your execfs argument list.\n"
                        " -?, --help            Print this usage information.\n"
                        " -l, --log FILE        Write logging information to FILE. Without this\n"
-                       "                       argument no logging is performed.\n",
+                       "                       argument no logging is performed.\n"
+                       " -s, --size SIZE       A size in bytes to report each file entry as having\n"
+                       "                       (default 10). The argument exists because some programs\n"
+                       "                       will stat a file before reading it and only read as\n"
+                       "                       many bytes as its reported size. Increase this value if\n"
+                       "                       you find the output of your executed commands is being\n"
+                       "                       truncated when read.\n",
                        argv[0]);
                 exit(0);
             } default: {

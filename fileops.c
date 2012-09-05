@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -39,6 +40,9 @@
 #define X BIT(0)
 
 #define RIGHTS_MASK 0x3
+
+/* Shell to use when opening a file read/write. */
+#define SHELL "/bin/sh"
 
 /* Whether this path is the root of the mount point. */
 static int is_root(const char *path) {
@@ -183,6 +187,64 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
     return 0;
 }
 
+/* Basically popen(path, "rw"), but popen doesn't let you do this. */
+static int popen_rw(const char *path, uint64_t *handle) {
+    /* What we're going to do is create two pipes that we'll use as the read
+     * and write file descriptors. Stdout and stdin, repsectively, in the
+     * opened process need to connect to these pipes.
+     */
+    int input[2], output[2];
+    if (pipe(input) != 0 || pipe(output) != 0) {
+        return -1;
+    }
+
+    /* Flush standard streams to avoid aberrations after forking. This
+     * shouldn't really be required as we aren't using any of these anyway.
+     */
+    fflush(stdout); fflush(stderr); fflush(stdin);
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        LOG("Failed to fork");
+        close(input[0]);
+        close(input[1]);
+        close(output[0]);
+        close(output[1]);
+        return -1;
+    } else if (pid == 0) {
+        /* We are the child. */
+
+        /* Close the ends of the pipe we don't need. */
+        close(input[1]); close(output[0]);
+
+        /* Overwrite our stdin and stdout such that they connect to the pipes.
+         */
+        if (dup2(input[0], STDIN_FILENO) < 0 || dup2(output[1], STDOUT_FILENO) < 0) {
+            LOG("Failed to overwrite stdin/stdout after forking");
+            exit(1);
+        }
+
+        /* Overwrite our image with the command to execute. Note that exec will
+         * only return if it fails.
+         */
+        (void)execl(SHELL, "sh", "-c", path, NULL);
+        LOG("Exec failed");
+        exit(1);
+    } else {
+        /* We are the parent. */
+        LOG("Forked off child %d to run %s", pid, path);
+
+        /* Close the ends of the pipe we don't need. */
+        close(input[0]); close(output[1]);
+
+        /* Pack the file descriptors we do need into the handle. */
+        assert(handle != NULL);
+        *handle = (((uint64_t)input[1]) << 32) | (uint64_t)output[0];
+        return 0;
+    }
+    assert(!"Unreachable");
+}
+
 static int exec_open(const char *path, struct fuse_file_info *fi) {
     assert(fi != NULL);
     LOG("open called on %s with flags %d", path, fi->flags);
@@ -209,7 +271,6 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
 typedef char _two_ints_fit_in_a_uint64_t
     [sizeof(uint64_t) >= 2 * sizeof(int) ? 1 : -1];
 
-    /* TODO: rw pipes. */
     /* Open the pipe and put the file descriptor in the low 32 bits of fi->fh
      * if it's open for reading and the high 32 bits if it's open for writing.
      * The reason for this is because we'll need two separate file descriptors
@@ -224,13 +285,21 @@ typedef char _two_ints_fit_in_a_uint64_t
             return -EBADF;
         }
         fi->fh = (uint64_t)fileno(f); /* Low 32 bits. */
-    } else {
+    } else if (rights == O_WRONLY) {
         f = popen(e->command, "w");
         if (f == NULL) {
             LOG("Failed to popen %s for writing", e->command);
             return -EBADF;
         }
         fi->fh = ((uint64_t)fileno(f)) << 32; /* High 32 bits */
+    } else {
+        /* Opening a file for read/write is a bit more complicated because
+         * popen doesn't let us do this directly.
+         */
+        if (popen_rw(e->command, &(fi->fh)) != 0) {
+            LOG("Failed to open %s for read/write", e->command);
+            return -EBADF;
+        }
     }
     LOG("Handle %llu returned from popen", fi->fh);
 

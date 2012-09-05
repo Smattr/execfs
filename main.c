@@ -70,6 +70,7 @@ static int parse_args(int argc, char **argv, int *last) {
         {"help", no_argument, 0, '?'},
         {"log", required_argument, 0, 'l'},
         {"size", required_argument, 0, 's'},
+        {"version", no_argument, 0, 'v'},
         {0, 0, 0, 0},
     };
     int index;
@@ -117,6 +118,9 @@ static int parse_args(int argc, char **argv, int *last) {
                 }
                 size = sz;
                 break;
+            } case 'v': {
+                printf("execfs version %s\n", VERSION);
+                exit(0);
             } case '?': {
                 printf("Usage: %s options -f fuse_options\n"
                        " -c, --config FILE     Read configuration from the given file. This argument\n"

@@ -5,6 +5,12 @@ endif
 
 default: execfs
 
+# Version info. Set this here or via the command line for a release. Otherwise
+# you just get the git commit ID.
+ifndef VERSION
+VERSION="git-$(shell git rev-parse HEAD)"
+endif
+
 ifeq (${V},1)
 Q:=
 else
@@ -30,7 +36,7 @@ log.o: log.h
 
 %.o: %.c
 	@echo " [CC] $@"
-	${Q}gcc -Wall ${WERROR} -c -o $@ $< ${FUSE_ARGS}
+	${Q}gcc -DVERSION=\"${VERSION}\" -Wall ${WERROR} -c -o $@ $< ${FUSE_ARGS}
 
 ### TOOLS TARGETS ###
 

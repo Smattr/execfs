@@ -38,7 +38,17 @@ open: tools/open.o
 	@echo " [LD] $@"
 	${Q}gcc -Wall ${WERROR} -o $@ $^
 
+### TEST TARGETS ###
+
+.PHONY: tests
+TESTS=$(patsubst tests/%.config,%,$(wildcard tests/test-*.config))
+tests: ${TESTS}
+
+test-%: tests/test-%.sh tests/test-%.config execfs tests/test.sh
+	@echo " [TEST] $@"
+	${Q}PATH=.:${PATH} ./tests/test.sh $< $(word 2,$^)
+
 .PHONY: default clean
 clean:
 	@echo " [CLEAN] execfs open *.o"
-	${Q}rm execfs open *.o
+	${Q}rm -f execfs open *.o

@@ -17,6 +17,8 @@ else
 WERROR:=-Werror
 endif
 
+### EXECFS TARGETS ###
+
 execfs: main.o config.o fileops.o log.o
 	@echo " [LD] $@"
 	${Q}gcc -Wall ${WERROR} -o $@ $^ ${FUSE_ARGS}
@@ -30,8 +32,13 @@ log.o: log.h
 	@echo " [CC] $@"
 	${Q}gcc -Wall ${WERROR} -c -o $@ $< ${FUSE_ARGS}
 
-clean:
-	@echo " [CLEAN] execfs *.o"
-	${Q}rm execfs *.o
+### TOOLS TARGETS ###
+
+open: tools/open.o
+	@echo " [LD] $@"
+	${Q}gcc -Wall ${WERROR} -o $@ $^
 
 .PHONY: default clean
+clean:
+	@echo " [CLEAN] execfs open *.o"
+	${Q}rm execfs open *.o

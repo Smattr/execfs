@@ -11,5 +11,5 @@ fi
 MOUNT=`mktemp -d`
 execfs --config "$2" --fuse "${MOUNT}" && \
  "$1" "${MOUNT}" && \
- fusermount -u "${MOUNT}" && \
+ fusermount -uz "${MOUNT}" && \
  rm -rf "${MOUNT}"

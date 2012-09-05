@@ -4,7 +4,7 @@ All files in this repository are licensed under a Creative Commons Attribution-N
 
 The best way of explaining what you are looking at may be: a FUSE file system that turns open() into popen(). I found I needed this for programs that did not have expressive enough input syntax/macros for their configuration/input files. I'm not sure what purpose you would like to put it to, but I'm sure you can come up with something.
 
-This is a work in progress currently and not necessarily fully functional. I wrote most of it in a hurry so there are almost certainly a few sharp edges. All the usual disclaimers apply; I take no responsibility if running this code causes your computer to explode. Apologies for the sparse documentation. More will be forthcoming.
+I wrote most of this code in a hurry so there are almost certainly a few sharp edges. All the usual disclaimers apply; I take no responsibility if running this code causes your computer to explode. Apologies for the sparse documentation. Questions welcome.
 
 If you find any bugs or would like other features added just let me know via the issue tracker and I'll get back to you as soon as I can.
 
@@ -42,6 +42,20 @@ So what just happened there...? We executed a program that opened /home/alice/te
 Use `fusermount -u /home/alice/test` to unmount the file system. Run `execfs --help` for some more command line options.
 
 (See the TODO list at the bottom for some caveats that will be fixed in a future version.)
+
+* Examples *
+------------
+
+Inspiration not striking you? Here's some snippets from my configuration.
+
+ sshconfig|400|cat ~/.ssh/config_* | block
+  I have several different SSH config files and I'd like my active config to be the union of all of them. Unfortunately SSH doesn't have a way of including one config file from another. By symlinking ~/.ssh/config to this file in my execfs partition I get what I want. Note that I need to use the block tool from this repository to coalesce the output.
+
+ multilog|200|tee /var/log/general.log ~/personal.log
+  Sometimes you want one file to be two in certain situations. A line like this creates a file that actually maps to multiple separate files when you write to it.
+
+ calculator|600|bc --quiet
+  This creates a file that runs bc, a command line calculator, when you open it. It lets you do maths by reading and writing to it. You can do this trick with any interpreter (including python, ruby or ghci with some trickery) to make an interactive file with the semantics of the given language.
 
 * Modifying *
 -------------

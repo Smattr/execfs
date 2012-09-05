@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include "config.h"
 #include "entry.h"
@@ -59,6 +60,19 @@ static int debug_printf(char *format, ...) {
     result = vfprintf(stderr, format, ap);
     va_end(ap);
     return result;
+}
+
+/* Signal handling functions. */
+static void handle_sigchld(int signal) {
+    /* Collect any zombie children. */
+    pid_t pid;
+    do {
+        pid = waitpid(-1, NULL, WNOHANG);
+    } while (pid > 0);
+}
+
+static void install_signal_handlers(void) {
+    signal(SIGCHLD, handle_sigchld);
 }
 
 /* Parse command line arguments. Returns 0 on success, non-zero on failure. */
@@ -179,6 +193,9 @@ int main(int argc, char **argv) {
     if (debug) {
         debug_dump_entries();
     }
+
+    /* Install our signal handlers now. */
+    install_signal_handlers();
 
     /* Set the owner of the mount point entries. */
     uid = geteuid();

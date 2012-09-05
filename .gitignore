@@ -1,3 +1,5 @@
 execfs
+open
+block
 *.o
 cscope.out

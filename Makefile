@@ -44,6 +44,10 @@ open: tools/open.o
 	@echo " [LD] $@"
 	${Q}gcc -Wall ${WERROR} -o $@ $^
 
+block: tools/block.o
+	@echo " [LD] $@"
+	${Q}gcc -Wall ${WERROR} -o $@ $^
+
 ### TEST TARGETS ###
 
 .PHONY: tests
@@ -56,5 +60,5 @@ test-%: tests/test-%.sh tests/test-%.config execfs tests/test.sh
 
 .PHONY: default clean
 clean:
-	@echo " [CLEAN] execfs open *.o"
-	${Q}rm -f execfs open *.o
+	@echo " [CLEAN] execfs open block *.o"
+	${Q}rm -f execfs open block *.o

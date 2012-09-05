@@ -137,11 +137,19 @@ static entry_t *parse_entry(char *s, printf_arg) {
         goto parse_entry_fail;
     }
 
-    /* Check for trailing fields. */
-    if (strtok(NULL, DELIMITERS) != NULL) {
-        DPRINTF("Illegal trailing field\n");
-        errno = EINVAL;
-        goto parse_entry_fail;
+    /* Assume any remaining 'tokens' are part of a pipeline in the command
+     * field.
+     */
+    while ((next = strtok(NULL, DELIMITERS)) != NULL) {
+        char *temp = realloc(e->command,
+            strlen(e->command) + 1 + strlen(next) + 1);
+        if (temp == NULL) {
+            DPRINTF("Out of memory in %s\n", __func__);
+            goto parse_entry_fail;
+        }
+        e->command = temp;
+        strcat(e->command, "|");
+        strcat(e->command, next);
     }
 
     return e;

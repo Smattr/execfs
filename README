@@ -54,6 +54,5 @@ Want to hack on this code? Go right ahead. The "interesting" guts of it are in f
 ---------
 
  - The configuration file has no comment syntax. #-prefixed lines would be nice. In fact the parsing of the configuration file is pretty limited all over. A line containing only whitespace is considered malformed.
- - Some sort of escaping syntax for the pipe symbol in the configuration file would be nice.
  - Just noticed that ls -l shows "total 0". This isn't really correct and is probably related to what getattr() (or statvfs?) is doing. Fix this.
  - There are some remaining file system functions not implemented. I'm guessing anything that invokes these gets a nasty unimplemented FUSE error.

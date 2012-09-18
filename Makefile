@@ -35,6 +35,8 @@ endif
 execfs: main.o config.o fileops.o log.o
 	@echo " [LD] $@"
 	${Q}gcc ${CFLAGS} -o $@ $^ ${FUSE_ARGS}
+	$(if $(filter 0,${DEBUG}),@echo " [STRIP] $@",)
+	$(if $(filter 0,${DEBUG}),${Q}strip $@,)
 
 main.o: entry.h config.h fileops.h log.h globals.h
 config.o: entry.h config.h

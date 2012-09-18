@@ -5,11 +5,14 @@ endif
 
 default: execfs
 
+CFLAGS:=-Wall
+
 # Version info. Set this here or via the command line for a release. Otherwise
 # you just get the git commit ID.
 ifndef VERSION
 VERSION="git-$(shell git rev-parse HEAD)"
 endif
+CFLAGS+=-DVERSION=\"${VERSION}\"
 
 ifeq (${V},1)
 Q:=
@@ -17,17 +20,21 @@ else
 Q:=@
 endif
 
+# By default, build an executable for debugging.
+ifndef DEBUG
+DEBUG=1
+endif
 ifeq (${DEBUG},1)
-WERROR:=
+CFLAGS+=-g -ggdb
 else
-WERROR:=-Werror
+CFLAGS+=-Werror -DNDEBUG
 endif
 
 ### EXECFS TARGETS ###
 
 execfs: main.o config.o fileops.o log.o
 	@echo " [LD] $@"
-	${Q}gcc -Wall ${WERROR} -o $@ $^ ${FUSE_ARGS}
+	${Q}gcc ${CFLAGS} -o $@ $^ ${FUSE_ARGS}
 
 main.o: entry.h config.h fileops.h log.h globals.h
 config.o: entry.h config.h
@@ -36,17 +43,17 @@ log.o: log.h
 
 %.o: %.c
 	@echo " [CC] $@"
-	${Q}gcc -DVERSION=\"${VERSION}\" -Wall ${WERROR} -c -o $@ $< ${FUSE_ARGS}
+	${Q}gcc ${CFLAGS} -c -o $@ $< ${FUSE_ARGS}
 
 ### TOOLS TARGETS ###
 
 open: tools/open.o
 	@echo " [LD] $@"
-	${Q}gcc -Wall ${WERROR} -o $@ $^
+	${Q}gcc ${CFLAGS} -o $@ $^
 
 block: tools/block.o
 	@echo " [LD] $@"
-	${Q}gcc -Wall ${WERROR} -o $@ $^
+	${Q}gcc ${CFLAGS} -o $@ $^
 
 ### TEST TARGETS ###
 

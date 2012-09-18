@@ -25,21 +25,6 @@ static char *config_filename = NULL;
 /* Debugging enabled. */
 static int debug = 0;
 
-/* Detect whether we are running under GDB. If so, we want to prevent FUSE
- * daemonising.
- */
-static int gdb = 0;
-static void __attribute__((constructor)) gdb_attached(void) {
-    /* Sketchy GDB detection technique from
-     * https://silviocesare.wordpress.com/2008/05/13/gdb-leaves-file-descriptors-open-in-debugee/
-     */
-    int fd = dup(STDOUT_FILENO);
-    if (fd != -1) {
-        close(fd);
-    }
-    gdb = (fd > STDERR_FILENO + 1);
-}
-
 /* Entries to present to the user in the mount point. */
 entry_t **entries = NULL;
 size_t entries_sz = 0;
@@ -195,10 +180,6 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    if (debug && gdb) {
-        fprintf(stderr, "GDB attached\n");
-    }
-
     entries = parse_config(&entries_sz, config_filename, debug ? &debug_printf : NULL);
     if (entries_sz == PARSE_FAIL) {
         perror("Failed to parse configuration file");
@@ -224,14 +205,6 @@ int main(int argc, char **argv) {
     --last_arg;
     assert(last_arg > 0);
     assert(last_arg < argc);
-    if (gdb) {
-        /* If GDB is attached, force FUSE into the foreground so GDB doesn't
-         * lose it. Note, you can do this by manually passing -f (or -d) after
-         * --fuse on the command line.
-         */
-        argv[last_arg] = "-f";
-        --last_arg;
-    }
     argv[last_arg] = argv[0];
     argv += last_arg;
     argc -= last_arg;

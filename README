@@ -20,9 +20,17 @@ Matthew Fernandez <matthew.fernandez@gmail.com>
 * Usage *
 ---------
 
-The first thing you need to do is construct a configuration file that describes the fake files you want execfs to present to you. The configuration file contains lines of the form "path|permissions|command". Path is the filename you want presented by execfs in your file system. Permissions should be a chmod numerical representation of the permissions you want the file to have. Command is the command you want executed when you open the file. A sample configuration might look like the following:
+The first thing you need to do is construct a configuration file that describes the fake files you want execfs to present to you. The configuration file uses the standard conf/INI format with entries of the form:
 
- my_file.txt|644|echo "hello world"
+ [path]
+     access = permissions
+     command = command
+
+Path is the filename you want presented by execfs in your file system. Permissions should be a chmod numerical representation of the permissions you want the file to have. Command is the command you want executed when you open the file. A sample configuration might look like the following:
+
+ [my_file.txt]
+     access = 644
+     command = echo hello world
 
 Now you need a directory where you want to mount this configuration. Suppose you have an empty directory "/home/alice/test" and you saved the configuration file above as "/home/alice/conf". Run the following to mount it:
 
@@ -37,7 +45,7 @@ Now let's see what this code actually does for us. Run `cat /home/alice/test/my_
 
  hello world
 
-So what just happened there...? We executed a program that opened /home/alice/test/my_file.txt for reading and, instead of opening a file, `echo "hello world"` was executed and the content that it printed to stdout was returned as the contents of the file. Hopefully now your imagination is running wild with the uses (and abuses) you could put this to.
+So what just happened there...? We executed a program that opened /home/alice/test/my_file.txt for reading and, instead of opening a file, `echo hello world` was executed and the content that it printed to stdout was returned as the contents of the file. Hopefully now your imagination is running wild with the uses (and abuses) you could put this to.
 
 Use `fusermount -u /home/alice/test` to unmount the file system. Run `execfs --help` for some more command line options.
 
@@ -48,13 +56,21 @@ Use `fusermount -u /home/alice/test` to unmount the file system. Run `execfs --h
 
 Inspiration not striking you? Here's some snippets from my configuration.
 
- sshconfig|400|cat ~/.ssh/config_* | block
+ [sshconfig]
+     access = 400
+     command = cat ~/.ssh/config_* | block
+
   I have several different SSH config files and I'd like my active config to be the union of all of them. Unfortunately SSH doesn't have a way of including one config file from another. By symlinking ~/.ssh/config to this file in my execfs partition I get what I want. Note that I need to use the block tool from this repository to coalesce the output.
 
- multilog|200|tee /var/log/general.log ~/personal.log
+ [multilog]
+     access = 200
+     command = tee /var/log/general.log ~/personal.log
+
   Sometimes you want one file to be two in certain situations. A line like this creates a file that actually maps to multiple separate files when you write to it.
 
- calculator|600|bc --quiet
+ [calculator]
+     access = 600
+     command = bc --quiet
   This creates a file that runs bc, a command line calculator, when you open it. It lets you do maths by reading and writing to it. You can do this trick with any interpreter (including python, ruby or ghci with some trickery) to make an interactive file with the semantics of the given language.
 
 * Modifying *
@@ -67,6 +83,5 @@ Want to hack on this code? Go right ahead. The "interesting" guts of it are in f
 * TODOs *
 ---------
 
- - The configuration file has no comment syntax. #-prefixed lines would be nice. In fact the parsing of the configuration file is pretty limited all over. A line containing only whitespace is considered malformed.
  - Just noticed that ls -l shows "total 0". This isn't really correct and is probably related to what getattr() (or statvfs?) is doing. Fix this.
  - There are some remaining file system functions not implemented. I'm guessing anything that invokes these gets a nasty unimplemented FUSE error.

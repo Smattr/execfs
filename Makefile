@@ -5,7 +5,9 @@ endif
 
 default: execfs
 
-CFLAGS:=-Wall
+INIPARSER=iniparser/src
+
+CFLAGS:=-Wall -I${INIPARSER}
 
 # Version info. Set this here or via the command line for a release. Otherwise
 # you just get the git commit ID.
@@ -32,7 +34,7 @@ endif
 
 ### EXECFS TARGETS ###
 
-execfs: main.o config.o fileops.o log.o
+execfs: main.o config.o fileops.o log.o ${INIPARSER}/iniparser.o ${INIPARSER}/dictionary.o
 	@echo " [LD] $@"
 	${Q}gcc ${CFLAGS} -o $@ $^ ${FUSE_ARGS}
 	$(if $(filter 0,${DEBUG}),@echo " [STRIP] $@",)
@@ -46,6 +48,15 @@ log.o: log.h
 %.o: %.c
 	@echo " [CC] $@"
 	${Q}gcc ${CFLAGS} -c -o $@ $< ${FUSE_ARGS}
+
+### INI parser dependencies ###
+config.o: ${INIPARSER}/iniparser.h ${INIPARSER}/dictionary.h
+${INIPARSER}/%.o: ${INIPARSER}/%.c ${INIPARSER}/%.h
+
+${INIPARSER}/%.c ${INIPARSER}/%.h:
+	${Q}which git >/dev/null
+	${Q}git submodule init
+	${Q}git submodule update
 
 ### TOOLS TARGETS ###
 

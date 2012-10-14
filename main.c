@@ -182,7 +182,11 @@ int main(int argc, char **argv) {
 
     entries = parse_config(&entries_sz, config_filename, debug ? &debug_printf : NULL);
     if (entries_sz == PARSE_FAIL) {
-        perror("Failed to parse configuration file");
+        if (errno != 0) {
+            perror("Failed to parse configuration file");
+        } else {
+            fprintf(stderr, "Failed to parse configuration file\n");
+        }
         return -1;
     }
 

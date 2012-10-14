@@ -80,12 +80,12 @@ static entry_t *parse_entry(dictionary *d, char *name, printf_arg) {
     /* Parse permissions. */
     char *tmp = get_string(d, name, "access");
     if (tmp == NULL) {
+        DPRINTF("Missing access entry\n");
         goto parse_entry_fail;
     }
     unsigned int u, g, o;
     if (sscanf(tmp, "%1u%1u%1u", &u, &g, &o) != 3 ||
             u & ~(R|W|X) || g & ~(R|W|X) || o & ~(R|W|X)) {
-        errno = EINVAL;
         DPRINTF("Invalid permissions entry\n");
         goto parse_entry_fail;
     }
@@ -95,9 +95,11 @@ static entry_t *parse_entry(dictionary *d, char *name, printf_arg) {
 
     /* Parse command. */
     tmp = get_string(d, name, "command");
-    if (tmp != NULL) {
-        e->command = strdup(tmp);
+    if (tmp == NULL) {
+        DPRINTF("Missing command entry\n");
+        goto parse_entry_fail;
     }
+    e->command = strdup(tmp);
     if (e->command == NULL) {
         errno = ENOMEM;
         goto parse_entry_fail;
@@ -160,7 +162,6 @@ entry_t **parse_config(size_t *len, char *filename, printf_arg) {
 
         e = parse_entry(d, secname, debug_printf);
         if (e == NULL) {
-            errno = ENOMEM;
             goto parse_config_fail;
         }
 

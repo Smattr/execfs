@@ -25,8 +25,9 @@ The first thing you need to do is construct a configuration file that describes 
  [path]
      access = permissions
      command = command
+     size = sz
 
-Path is the filename you want presented by execfs in your file system. Permissions should be a chmod numerical representation of the permissions you want the file to have. Command is the command you want executed when you open the file. A sample configuration might look like the following:
+Path is the filename you want presented by execfs in your file system. Permissions should be a chmod numerical representation of the permissions you want the file to have. Command is the command you want executed when you open the file. Size is an optional parameter that sets the apparent size of the file. A sample configuration might look like the following:
 
  [my_file.txt]
      access = 644

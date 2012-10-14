@@ -16,6 +16,9 @@ typedef struct {
     int o_w : 1;
     int o_x : 1;
     char *command;
+    int size;
 } entry_t;
+
+#define UNSPECIFIED_SIZE (-1)
 
 #endif

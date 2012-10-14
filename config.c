@@ -28,6 +28,18 @@
         } \
     } while (0)
 
+static char *make_key(char *prefix, char *suffix) {
+    char *index = (char*)malloc(sizeof(char) *
+        (strlen(prefix) + strlen(":") + strlen(suffix) + 1));
+    if (index == NULL) {
+        return NULL;
+    }
+    strcpy(index, prefix);
+    strcat(index, ":");
+    strcat(index, suffix);
+    return index;
+}
+
 /* Wrapper around iniparser_getstring(). */
 static char *get_string(dictionary *d, char *section, char *key) {
     assert(d != NULL);
@@ -35,18 +47,30 @@ static char *get_string(dictionary *d, char *section, char *key) {
     assert(key != NULL);
 
     /* INI parser stores items indexed by "section:key" */
-    char *index = (char*)malloc(sizeof(char) *
-        (strlen(section) + strlen(":") + strlen(key) + 1));
+    char *index = make_key(section, key);
     if (index == NULL) {
         return NULL;
     }
-    strcpy(index, section);
-    strcat(index, ":");
-    strcat(index, key);
 
     char *value = iniparser_getstring(d, index, NULL);
     free(index);
     return value;
+}
+
+/* Wrapper around iniparser_getint(). */
+static int get_int(dictionary *d, char *section, char *key, int notfound) {
+    assert(d != NULL);
+    assert(section != NULL);
+    assert(key != NULL);
+
+    char *index = make_key(section, key);
+    if (index == NULL) {
+        return notfound;
+    }
+
+    int i = iniparser_getint(d, index, notfound);
+    free(index);
+    return i;
 }
 
 /* Parse a string into a directory entry. An entry is expected to be in the
@@ -69,6 +93,7 @@ static entry_t *parse_entry(dictionary *d, char *name, printf_arg) {
         goto parse_entry_fail;
     }
     memset(e, 0, sizeof(entry_t));
+    e->size = UNSPECIFIED_SIZE;
 
     /* Copy path. */
     e->path = strdup(name);
@@ -104,6 +129,9 @@ static entry_t *parse_entry(dictionary *d, char *name, printf_arg) {
         errno = ENOMEM;
         goto parse_entry_fail;
     }
+
+    /* Parse size. */
+    e->size = get_int(d, name, "size", UNSPECIFIED_SIZE);
 
     return e;
 

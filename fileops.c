@@ -180,7 +180,7 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
             | (e->o_r ? S_IROTH : 0)
             | (e->o_w ? S_IWOTH : 0)
             | (e->o_x ? S_IXOTH : 0);
-        stbuf->st_size = size;
+        stbuf->st_size = e->size == UNSPECIFIED_SIZE ? size : e->size;
         stbuf->st_nlink = 1;
     }
 

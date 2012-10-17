@@ -34,12 +34,22 @@
     } while(0)
 #endif
 
-#define BIT(n) (1UL << (n))
+#define BIT(n) (1ULL << (n))
+#define MASK(n) (BIT(n) - 1)
 #define R BIT(2)
 #define W BIT(1)
 #define X BIT(0)
 
 #define RIGHTS_MASK 0x3
+
+/* These functions pack two file descriptors (ints) into a uint64_t, so let's
+ * check (at compile time) that they'll actually fit.
+ */
+typedef char _two_ints_fit_in_a_uint64_t
+    [sizeof(uint64_t) >= 2 * sizeof(int) ? 1 : -1];
+static int read_fd(uint64_t fh) { return fh & MASK(32); }
+static int write_fd(uint64_t fh) { return fh >> 32; }
+static uint64_t pack_fds(int rd, int wr) { return (uint64_t)wr << 32 | (uint64_t)rd; }
 
 /* Shell to use when opening a file read/write. */
 #define SHELL "/bin/sh"
@@ -239,7 +249,7 @@ static int popen_rw(const char *path, uint64_t *handle) {
 
         /* Pack the file descriptors we do need into the handle. */
         assert(handle != NULL);
-        *handle = (((uint64_t)input[1]) << 32) | (uint64_t)output[0];
+        *handle = pack_fds(output[0], input[1]);
         return 0;
     }
     assert(!"Unreachable");
@@ -265,12 +275,6 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
         rights == O_RDONLY ? "read" :
         rights == O_WRONLY ? "write" : "read/write");
 
-/* We're about to pack two file descriptors (ints) into a uint64_t, so let's
- * check (at compile time) that they'll actually fit.
- */
-typedef char _two_ints_fit_in_a_uint64_t
-    [sizeof(uint64_t) >= 2 * sizeof(int) ? 1 : -1];
-
     /* Open the pipe and put the file descriptor in the low 32 bits of fi->fh
      * if it's open for reading and the high 32 bits if it's open for writing.
      * The reason for this is because we'll need two separate file descriptors
@@ -284,14 +288,14 @@ typedef char _two_ints_fit_in_a_uint64_t
             LOG("Failed to popen %s for reading", e->command);
             return -EBADF;
         }
-        fi->fh = (uint64_t)fileno(f); /* Low 32 bits. */
+        fi->fh = pack_fds(fileno(f), 0);
     } else if (rights == O_WRONLY) {
         f = popen(e->command, "w");
         if (f == NULL) {
             LOG("Failed to popen %s for writing", e->command);
             return -EBADF;
         }
-        fi->fh = ((uint64_t)fileno(f)) << 32; /* High 32 bits */
+        fi->fh = pack_fds(0, fileno(f));
     } else {
         /* Opening a file for read/write is a bit more complicated because
          * popen doesn't let us do this directly.
@@ -315,7 +319,8 @@ static int exec_read(const char *path, char *buf, size_t size, off_t offset, str
      */
     assert(fi->fh != 0);
     assert(size <= SSIZE_MAX); /* read() is undefined when passed >SSIZE_MAX */
-    ssize_t sz = read((int)(fi->fh & ((1ULL << 32) - 1)), buf, size);
+    int fd = read_fd(fi->fh);
+    ssize_t sz = read(fd, buf, size);
     if (sz == -1) {
         LOG("read from %s failed with error %d", path, errno);
     } else {
@@ -345,8 +350,8 @@ static int exec_release(const char *path, struct fuse_file_info *fi) {
     LOG("Releasing %s with handle %llu", path, fi->fh);
     assert(is_root(path) || find_entry(path) != NULL);
     assert(fi->fh != 0);
-    int readfd = (int)(fi->fh & ((1ULL << 32) - 1));
-    int writefd = (int)(fi->fh >> 32);
+    int readfd = read_fd(fi->fh);
+    int writefd = write_fd(fi->fh);
     if (readfd != 0) { /* File was opened for reading. */
         (void)close(readfd);
     }
@@ -362,7 +367,8 @@ static int exec_write(const char *path, const char *buf, size_t size, off_t offs
 
     assert(fi->fh != 0);
     assert(size <= SSIZE_MAX); /* write() is undefined when passed >SSIZE_MAX */
-    ssize_t sz = write((int)(fi->fh >> 32), buf, size);
+    int fd = write_fd(fi->fh);
+    ssize_t sz = write(fd, buf, size);
     if (sz == -1) {
         LOG("write to %s failed with error %d", path, errno);
     } else {

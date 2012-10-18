@@ -7,7 +7,7 @@
 
 #include "entry.h"
 
-extern entry_t **entries;
+extern entry_t *entries;
 extern size_t entries_sz;
 
 extern uid_t uid;

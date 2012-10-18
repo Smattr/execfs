@@ -80,19 +80,15 @@ static int get_int(dictionary *d, char *section, char *key, int notfound) {
  *      access = permissions
  *      command = command to execute
  *
- * Permissions should be given in chmod numerical form. This function returns
- * NULL on failure.
+ * Permissions should be given in chmod numerical form. The first parameter is
+ * taken as a location to write the parsed entry to and this function returns
+ * non-zero on failure.
  */
-static entry_t *parse_entry(dictionary *d, char *name, printf_arg) {
+static int parse_entry(entry_t *e, dictionary *d, char *name, printf_arg) {
     assert(d != NULL);
     assert(name != NULL);
+    assert(e != NULL);
 
-    entry_t *e = (entry_t*)malloc(sizeof(entry_t));
-    if (e == NULL) {
-        errno = ENOMEM;
-        goto parse_entry_fail;
-    }
-    memset(e, 0, sizeof(entry_t));
     e->size = UNSPECIFIED_SIZE;
 
     /* Copy path. */
@@ -133,40 +129,19 @@ static entry_t *parse_entry(dictionary *d, char *name, printf_arg) {
     /* Parse size. */
     e->size = get_int(d, name, "size", UNSPECIFIED_SIZE);
 
-    return e;
+    return 0;
 
 parse_entry_fail:
-    if (e != NULL) {
-        if (e->path != NULL) free(e->path);
-        if (e->command != NULL) free(e->command);
-        free(e);
-    }
-    return NULL;
+    if (e->path != NULL) free(e->path);
+    if (e->command != NULL) free(e->command);
+    return -1;
 }
 
-/* Append an entry to the existing array of directory entries. arr is the
- * address of the current entry array, item is the entry to append and len is
- * the current length of the array.
- */
-static int append_entry(entry_t ***arr, entry_t *item, size_t len, printf_arg) {
-    assert(arr != NULL);
-    assert(item != NULL);
-    entry_t **ptr = (entry_t**)realloc(*arr, sizeof(entry_t) * (len + 1));
-    if (ptr == NULL) {
-        DPRINTF("Out of memory in %s\n", __func__);
-        return -1;
-    }
-    *arr = ptr;
-    (*arr)[len] = item;
-    return 0;
-}
-
-entry_t **parse_config(size_t *len, char *filename, printf_arg) {
+entry_t *parse_config(size_t *len, char *filename, printf_arg) {
     assert(len != NULL);
     assert(filename != NULL);
     *len = 0;
-    entry_t **entries = NULL;
-    entry_t *e = NULL;
+    entry_t *entries = NULL;
 
     dictionary *d = NULL;
 
@@ -174,51 +149,42 @@ entry_t **parse_config(size_t *len, char *filename, printf_arg) {
         goto parse_config_fail;
     }
 
-    int sections = iniparser_getnsec(d);
-    DPRINTF("%d sections found in configuration file.\n", sections);
-    if (sections == -1) {
+    *len = iniparser_getnsec(d);
+    DPRINTF("%d sections found in configuration file.\n", *len);
+    if (*len == -1) {
         goto parse_config_fail;
     }
+    entries = (entry_t*)malloc(sizeof(entry_t) * *len);
+    if (entries == NULL) {
+        *len = 0;
+        goto parse_config_fail;
+    }
+    memset(entries, 0, sizeof(entry_t) * *len);
 
     int i;
-    for (i = 0; i < sections; ++i) {
+    for (i = 0; i < *len; ++i) {
         char *secname = iniparser_getsecname(d, i);
         if (secname == NULL) {
             goto parse_config_fail;
         }
         DPRINTF("Parsing section %s\n", secname);
 
-        e = parse_entry(d, secname, debug_printf);
-        if (e == NULL) {
+        if (parse_entry(&entries[i], d, secname, debug_printf) != 0) {
             goto parse_config_fail;
         }
-
-        DPRINTF("Appending entry %s\n", e->path);
-        if (append_entry(&entries, e, *len, debug_printf) != 0) {
-            DPRINTF("Failed to append entry.\n");
-            goto parse_config_fail;
-        }
-        (*len)++;
     }
 
     return entries;
 
 parse_config_fail:
+    assert(len != NULL);
     if (entries != NULL) {
-        assert(len != NULL);
         int i;
         for (i = 0; i < *len; ++i) {
-            assert(entries[i] != NULL);
-            free(entries[i]->path);
-            free(entries[i]->command);
-            free(entries[i]);
+            free(entries[i].path);
+            free(entries[i].command);
         }
         free(entries);
-    }
-    if (e != NULL) {
-        if (e->path != NULL) free(e->path);
-        if (e->command != NULL) free(e->command);
-        free(e);
     }
     *len = PARSE_FAIL;
     return NULL;

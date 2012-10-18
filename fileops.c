@@ -72,8 +72,8 @@ static entry_t *find_entry(const char *path) {
 
     int i;
     for (i = 0; i < entries_sz; ++i) {
-        if (!strcmp(path + 1, entries[i]->path)) {
-            return entries[i];
+        if (!strcmp(path + 1, entries[i].path)) {
+            return &entries[i];
         }
     }
     return NULL;
@@ -338,7 +338,7 @@ static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 
     int i;
     for (i = offset; i < entries_sz; ++i) {
-        if (filler(buf, entries[i]->path, NULL, i + 1) != 0) {
+        if (filler(buf, entries[i].path, NULL, i + 1) != 0) {
             return 0;
         }
     }

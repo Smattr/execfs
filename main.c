@@ -26,7 +26,7 @@ static char *config_filename = NULL;
 static int debug = 0;
 
 /* Entries to present to the user in the mount point. */
-entry_t **entries = NULL;
+entry_t *entries = NULL;
 size_t entries_sz = 0;
 
 /* Identity of the mounter. This will become the owner of all entries in the
@@ -45,11 +45,11 @@ static void debug_dump_entries(void) {
     size_t i;
     fprintf(stderr, "Entries table has %u entries:\n", (unsigned int)entries_sz);
     for (i = 0; i < entries_sz; ++i) {
-        fprintf(stderr, " Path: %s; -%c%c%c%c%c%c%c%c%c; Exec: %s; Size %d\n", entries[i]->path, 
-            entries[i]->u_r?'r':'-', entries[i]->u_w?'w':'-', entries[i]->u_x?'x':'-',
-            entries[i]->g_r?'r':'-', entries[i]->g_w?'w':'-', entries[i]->g_x?'x':'-',
-            entries[i]->o_r?'r':'-', entries[i]->o_w?'w':'-', entries[i]->o_x?'x':'-',
-            entries[i]->command, entries[i]->size);
+        fprintf(stderr, " Path: %s; -%c%c%c%c%c%c%c%c%c; Exec: %s; Size %d\n", entries[i].path, 
+            entries[i].u_r?'r':'-', entries[i].u_w?'w':'-', entries[i].u_x?'x':'-',
+            entries[i].g_r?'r':'-', entries[i].g_w?'w':'-', entries[i].g_x?'x':'-',
+            entries[i].o_r?'r':'-', entries[i].o_w?'w':'-', entries[i].o_x?'x':'-',
+            entries[i].command, entries[i].size);
     }
 }
 static int debug_printf(char *format, ...) {

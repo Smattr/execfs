@@ -9,7 +9,7 @@
  * with its length in the output parameter len. PARSE_FAIL is returned in len
  * if parsing fails.
  */
-entry_t **parse_config(size_t *len, char *filename,
+entry_t *parse_config(size_t *len, char *filename,
         int(*debug_printf)(char *format, ...));
 
 #endif

@@ -65,6 +65,7 @@ static int is_root(const char *path) {
  * frequently.
  */
 static entry_t *find_entry(const char *path) {
+    assert(path != NULL);
     if (path[0] != '/') {
         /* We were passed a path outside this mount point (?) */
         return NULL;
@@ -72,6 +73,7 @@ static entry_t *find_entry(const char *path) {
 
     int i;
     for (i = 0; i < entries_sz; ++i) {
+        assert(entries[i].path != NULL);
         if (!strcmp(path + 1, entries[i].path)) {
             return &entries[i];
         }
@@ -85,6 +87,9 @@ static entry_t *find_entry(const char *path) {
 static unsigned int access_rights(entry_t *entry) {
     struct fuse_context *context = fuse_get_context();
     unsigned int rights;
+
+    assert(context != NULL);
+    assert(entry != NULL);
 
     if (context->uid == uid) {
         rights = (entry->u_r ? R : 0)
@@ -109,6 +114,7 @@ static void exec_destroy(void *private_data) {
 }
 
 static int exec_flush(const char *path, struct fuse_file_info *fi) {
+    assert(fi != NULL);
     LOG("flush called on %s with handle %llu", path, fi->fh);
     if (is_root(path)) {
         return 0;
@@ -338,6 +344,7 @@ static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 
     int i;
     for (i = offset; i < entries_sz; ++i) {
+        assert(entries[i].path != NULL);
         if (filler(buf, entries[i].path, NULL, i + 1) != 0) {
             return 0;
         }
@@ -380,11 +387,13 @@ static int exec_write(const char *path, const char *buf, size_t size, off_t offs
 /* Stub out all the irrelevant functions. */
 #define FAIL_STUB(func, args...) \
     static int exec_ ## func(const char *path , ## args) { \
+        assert(path != NULL); \
         LOG("Fail stubbed function %s called on %s", __func__, path); \
         return -EACCES; \
     }
 #define NOP_STUB(func, args...) \
     static int exec_ ## func(const char *path , ## args) { \
+        assert(path != NULL); \
         LOG("No-op stubbed function %s called on %s", __func__, path); \
         if (!is_root(path) && find_entry(path) == NULL) { \
             return -ENOENT; \

@@ -2,7 +2,6 @@
 #define _EXECFS_MACROS_H_
 
 #define BIT(n) (1ULL << (n))
-#define MASK(n) (BIT(n) - 1)
 
 #define R BIT(2)
 #define W BIT(1)

@@ -11,7 +11,7 @@
 #define SHELL "/bin/sh"
 
 /* Basically popen(path, "rw"), but popen doesn't let you do this. */
-static int popen_rw(const char *path, uint64_t *handle) {
+static int popen_rw(const char *path, int *read_fd, int *write_fd) {
     /* What we're going to do is create two pipes that we'll use as the read
      * and write file descriptors. Stdout and stdin, repsectively, in the
      * opened process need to connect to these pipes.
@@ -57,20 +57,21 @@ static int popen_rw(const char *path, uint64_t *handle) {
         close(input[0]); close(output[1]);
 
         /* Pack the file descriptors we do need into the handle. */
-        *handle = pack_fds(output[0], input[1]);
+        *read_fd = output[0];
+        *write_fd = input[1];
         return 0;
     }
     /* Unreachable. */
 }
 
-int pipe_open(char *command, char *mode, uint64_t* out_handle) {
+int pipe_open(char *command, char *mode, int *read_fd, int *write_fd) {
 
     if (!strcmp(mode, "r")) {
         FILE *f = popen(command, "r");
         if (f == NULL) {
             return -1;
         }
-        *out_handle = pack_fds(fileno(f), 0);
+        *read_fd = fileno(f);
         return 0;
 
     } else if (!strcmp(mode, "w")) {
@@ -78,11 +79,11 @@ int pipe_open(char *command, char *mode, uint64_t* out_handle) {
         if (f == NULL) {
             return -1;
         }
-        *out_handle = pack_fds(0, fileno(f));
+        *write_fd = fileno(f);
         return 0;
 
     }
     
     /* "rw" */
-    return popen_rw(command, out_handle);
+    return popen_rw(command, read_fd, write_fd);
 }

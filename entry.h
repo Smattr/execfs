@@ -2,6 +2,7 @@
 #define _EXECFS_ENTRY_H_
 
 #include <stddef.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 typedef struct {
@@ -21,5 +22,13 @@ typedef struct {
 } entry_t;
 
 #define UNSPECIFIED_SIZE (-1)
+
+typedef struct {
+    int read_fd;
+    int write_fd;
+    char *buf;
+    size_t len;
+    int cache;
+} handle_t;
 
 #endif

@@ -2,7 +2,7 @@ All files in this repository are licensed under a Creative Commons Attribution-N
 
 <hr />
 
-The best way of explaining what you are looking at may be: a FUSE file system that turns open() into popen(). I found I needed this for programs that did not have expressive enough input syntax/macros for their configuration/input files. I'm not sure what purpose you would like to put it to, but I'm sure you can come up with something.
+The best way of explaining what you are looking at may be: a FUSE file system that turns `open()` into `popen()`. I found I needed this for programs that did not have expressive enough input syntax/macros for their configuration/input files. I'm not sure what purpose you would like to put it to, but I'm sure you can come up with something.
 
 I wrote most of this code in a hurry so there are almost certainly a few sharp edges. All the usual disclaimers apply; I take no responsibility if running this code causes your computer to explode. Apologies for the sparse documentation. Questions welcome.
 
@@ -25,9 +25,10 @@ The first thing you need to do is construct a configuration file that describes 
      access = permissions
      command = command
      size = sz
+     cache = c
 </pre>
 
-Path is the filename you want presented by execfs in your file system. Permissions should be a chmod numerical representation of the permissions you want the file to have. Command is the command you want executed when you open the file. Size is an optional parameter that sets the apparent size of the file. A sample configuration might look like the following:
+Path is the filename you want presented by execfs in your file system. Permissions should be a chmod numerical representation of the permissions you want the file to have. Command is the command you want executed when you open the file. Size is an optional parameter that sets the apparent size of the file. Cache is an optional parameter, either 0 or 1, that determines whether the output is cached internally. A sample configuration might look like the following:
 
 <pre>
  [my_file.txt]
@@ -82,7 +83,7 @@ Inspiration not striking you? Here's some snippets from my configuration.
      command = bc --quiet
 </pre>
 
-This creates a file that runs bc, a command line calculator, when you open it. It lets you do maths by reading and writing to it. You can do this trick with any interpreter (including python, ruby or ghci with some trickery) to make an interactive file with the semantics of the given language.
+This creates a file that runs `bc`, a command line calculator, when you open it. It lets you do maths by reading and writing to it. You can do this trick with any interpreter (including `python`, `ruby` or `ghci` with some trickery) to make an interactive file with the semantics of the given language.
 
 ## Modifying
 

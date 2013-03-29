@@ -125,6 +125,9 @@ static int parse_entry(entry_t *e, dictionary *d, char *name, printf_arg) {
     /* Parse size. */
     e->size = get_int(d, name, "size", UNSPECIFIED_SIZE);
 
+    /* Parse cacheable. */
+    e->cache = get_int(d, name, "cache", 0);
+
     return 0;
 
 parse_entry_fail:

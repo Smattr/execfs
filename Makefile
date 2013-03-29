@@ -34,16 +34,18 @@ endif
 
 ### EXECFS TARGETS ###
 
-execfs: main.o config.o fileops.o log.o ${INIPARSER}/iniparser.o ${INIPARSER}/dictionary.o
+execfs: main.o config.o fileops.o impl.o log.o pipes.o ${INIPARSER}/iniparser.o ${INIPARSER}/dictionary.o
 	@echo " [LD] $@"
 	${Q}gcc ${CFLAGS} -o $@ $^ ${FUSE_ARGS}
 	$(if $(filter 0,${DEBUG}),@echo " [STRIP] $@",)
 	$(if $(filter 0,${DEBUG}),${Q}strip $@,)
 
 main.o: entry.h config.h fileops.h log.h globals.h
-config.o: entry.h config.h
-fileops.o: entry.h fileops.h globals.h
-log.o: log.h
+config.o: entry.h config.h macros.h
+fileops.o: assert.h entry.h fileops.h globals.h impl.h log.h macros.h
+impl.o: entry.h fuse.h pipes.h
+log.o: globals.h log.h
+pipes.o: pipes.h
 
 %.o: %.c
 	@echo " [CC] $@"

@@ -1,58 +1,18 @@
 /* Implementations of all the FUSE operations for this file system. */
 
-/* Use newer version of FUSE API. */
-#define FUSE_USE_VERSION 26
-#include <fuse.h>
-
 #include <errno.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
-
+#include "assert.h"
 #include "entry.h"
 #include "fileops.h"
 #include "globals.h"
+#include "impl.h"
 #include "log.h"
-
-/* All the functions in this file are invoked as FUSE callbacks, which results
- * in assertion failures being invisible to the user. To provide meaningful
- * assertion functionality we provide our own assert() that prints failures to
- * the log.
- */
-#undef assert
-#ifdef NDEBUG
-    #define assert(expr) ((void)0)
-#else
-    #define assert(expr) do { \
-        if (!(expr)) { \
-            LOG("%s:%d: %s: Assertion `%s' failed", __FILE__, __LINE__, __func__, #expr); \
-            return -1; \
-        } \
-    } while(0)
-#endif
-
-#define BIT(n) (1ULL << (n))
-#define MASK(n) (BIT(n) - 1)
-#define R BIT(2)
-#define W BIT(1)
-#define X BIT(0)
-
-#define RIGHTS_MASK 0x3
-
-/* These functions pack two file descriptors (ints) into a uint64_t, so let's
- * check (at compile time) that they'll actually fit.
- */
-typedef char _two_ints_fit_in_a_uint64_t
-    [sizeof(uint64_t) >= 2 * sizeof(int) ? 1 : -1];
-static int read_fd(uint64_t fh) { return fh & MASK(32); }
-static int write_fd(uint64_t fh) { return fh >> 32; }
-static uint64_t pack_fds(int rd, int wr) { return (uint64_t)wr << 32 | (uint64_t)rd; }
-
-/* Shell to use when opening a file read/write. */
-#define SHELL "/bin/sh"
+#include "macros.h"
 
 /* Whether this path is the root of the mount point. */
 static int is_root(const char *path) {
@@ -65,7 +25,6 @@ static int is_root(const char *path) {
  * frequently.
  */
 static entry_t *find_entry(const char *path) {
-    assert(path != NULL);
     if (path[0] != '/') {
         /* We were passed a path outside this mount point (?) */
         return NULL;
@@ -73,7 +32,6 @@ static entry_t *find_entry(const char *path) {
 
     int i;
     for (i = 0; i < entries_sz; ++i) {
-        assert(entries[i].path != NULL);
         if (!strcmp(path + 1, entries[i].path)) {
             return &entries[i];
         }
@@ -113,9 +71,7 @@ static void exec_destroy(void *private_data) {
     log_close();
 }
 
-/* Start of "interesting" code. The guts of the implementation are below in
- * exec_getattr(), exec_open(), exec_read() and exec_write().
- */
+/* Start of "interesting" code. */
 
 static int exec_getattr(const char *path, struct stat *stbuf) {
     LOG("getattr called on %s", path);
@@ -168,64 +124,6 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
     return 0;
 }
 
-/* Basically popen(path, "rw"), but popen doesn't let you do this. */
-static int popen_rw(const char *path, uint64_t *handle) {
-    /* What we're going to do is create two pipes that we'll use as the read
-     * and write file descriptors. Stdout and stdin, repsectively, in the
-     * opened process need to connect to these pipes.
-     */
-    int input[2], output[2];
-    if (pipe(input) != 0 || pipe(output) != 0) {
-        return -1;
-    }
-
-    /* Flush standard streams to avoid aberrations after forking. This
-     * shouldn't really be required as we aren't using any of these anyway.
-     */
-    fflush(stdout); fflush(stderr); fflush(stdin);
-
-    pid_t pid = fork();
-    if (pid == -1) {
-        LOG("Failed to fork");
-        close(input[0]);
-        close(input[1]);
-        close(output[0]);
-        close(output[1]);
-        return -1;
-    } else if (pid == 0) {
-        /* We are the child. */
-
-        /* Close the ends of the pipe we don't need. */
-        close(input[1]); close(output[0]);
-
-        /* Overwrite our stdin and stdout such that they connect to the pipes.
-         */
-        if (dup2(input[0], STDIN_FILENO) < 0 || dup2(output[1], STDOUT_FILENO) < 0) {
-            LOG("Failed to overwrite stdin/stdout after forking");
-            exit(1);
-        }
-
-        /* Overwrite our image with the command to execute. Note that exec will
-         * only return if it fails.
-         */
-        (void)execl(SHELL, "sh", "-c", path, NULL);
-        LOG("Exec failed");
-        exit(1);
-    } else {
-        /* We are the parent. */
-        LOG("Forked off child %d to run %s", pid, path);
-
-        /* Close the ends of the pipe we don't need. */
-        close(input[0]); close(output[1]);
-
-        /* Pack the file descriptors we do need into the handle. */
-        assert(handle != NULL);
-        *handle = pack_fds(output[0], input[1]);
-        return 0;
-    }
-    assert(!"Unreachable");
-}
-
 static int exec_open(const char *path, struct fuse_file_info *fi) {
     assert(fi != NULL);
     LOG("open called on %s with flags %d", path, fi->flags);
@@ -246,58 +144,11 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
         rights == O_RDONLY ? "read" :
         rights == O_WRONLY ? "write" : "read/write");
 
-    /* Open the pipe and put the file descriptor in the low 32 bits of fi->fh
-     * if it's open for reading and the high 32 bits if it's open for writing.
-     * The reason for this is because we'll need two separate file descriptors
-     * to do a read/write pipe, in which case we can pack them both into
-     * fi->fh. Kind of handy that FUSE gives us 64 bits for a handle.
-     */
-    FILE *f;
-    if (rights == O_RDONLY) {
-        f = popen(e->command, "r");
-        if (f == NULL) {
-            LOG("Failed to popen %s for reading", e->command);
-            return -EBADF;
-        }
-        fi->fh = pack_fds(fileno(f), 0);
-    } else if (rights == O_WRONLY) {
-        f = popen(e->command, "w");
-        if (f == NULL) {
-            LOG("Failed to popen %s for writing", e->command);
-            return -EBADF;
-        }
-        fi->fh = pack_fds(0, fileno(f));
-    } else {
-        /* Opening a file for read/write is a bit more complicated because
-         * popen doesn't let us do this directly.
-         */
-        if (popen_rw(e->command, &(fi->fh)) != 0) {
-            LOG("Failed to open %s for read/write", e->command);
-            return -EBADF;
-        }
-    }
-    LOG("Handle %llu returned from popen", fi->fh);
-
-    return 0;
+    return file_open(e, rights, fi);
 }
 
-static int exec_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-    assert(fi != NULL);
-    LOG("read of %d bytes from %s with handle %llu", size, path, fi->fh);
-
-    /* 0 is actually a valid file descriptor, but we know it's stdin so there's
-     * no way it can be the one we're about to read from.
-     */
-    assert(fi->fh != 0);
-    assert(size <= SSIZE_MAX); /* read() is undefined when passed >SSIZE_MAX */
-    int fd = read_fd(fi->fh);
-    ssize_t sz = read(fd, buf, size);
-    if (sz == -1) {
-        LOG("read from %s failed with error %d", path, errno);
-    } else {
-        LOG("read from %s returned %d bytes", path, sz);
-    }
-    return sz;
+static int exec_read(const char *path, char *buf, size_t size, off_t offset, info_t *fi) {
+    return file_read(buf, size, offset, fi);
 }
 
 static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
@@ -318,35 +169,11 @@ static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 }
 
 static int exec_release(const char *path, struct fuse_file_info *fi) {
-    assert(fi != NULL);
-    LOG("Releasing %s with handle %llu", path, fi->fh);
-    assert(is_root(path) || find_entry(path) != NULL);
-    assert(fi->fh != 0);
-    int readfd = read_fd(fi->fh);
-    int writefd = write_fd(fi->fh);
-    if (readfd != 0) { /* File was opened for reading. */
-        (void)close(readfd);
-    }
-    if (writefd != 0) { /* File was opened for writing. */
-        (void)close(writefd);
-    }
-    return 0;
+    return file_close(fi);
 }
 
-static int exec_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-    assert(fi != NULL);
-    LOG("write of %d bytes to %s with handle %llu", size, path, fi->fh);
-
-    assert(fi->fh != 0);
-    assert(size <= SSIZE_MAX); /* write() is undefined when passed >SSIZE_MAX */
-    int fd = write_fd(fi->fh);
-    ssize_t sz = write(fd, buf, size);
-    if (sz == -1) {
-        LOG("write to %s failed with error %d", path, errno);
-    } else {
-        LOG("write to %s of %d bytes", path, sz);
-    }
-    return sz;
+static int exec_write(const char *path, const char *buf, size_t size, off_t offset, info_t *fi) {
+    return file_write(buf, size, offset, fi);
 }
 
 /* Stub out all the irrelevant functions. */

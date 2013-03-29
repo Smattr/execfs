@@ -13,11 +13,7 @@
 
 #include "config.h"
 #include "entry.h"
-
-#define BIT(n) (1UL << (n))
-#define R BIT(2)
-#define W BIT(1)
-#define X BIT(0)
+#include "macros.h"
 
 #define printf_arg int(*debug_printf)(char *format, ...)
 

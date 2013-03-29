@@ -12,6 +12,7 @@ if [ $? -ne 0 ]; then
     echo "Failed to write to file." >&2
     exit 1
 fi
+sleep 0.1
 OUTPUT="`cat /tmp/_execfs_test-write.config.testing`"
 if [ $? -ne 0 ]; then
     echo "Failed to read back written contents." >&2

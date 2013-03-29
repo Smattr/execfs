@@ -113,41 +113,6 @@ static void exec_destroy(void *private_data) {
     log_close();
 }
 
-static int exec_flush(const char *path, struct fuse_file_info *fi) {
-    assert(fi != NULL);
-    LOG("flush called on %s with handle %llu", path, fi->fh);
-    if (is_root(path)) {
-        return 0;
-    }
-
-    entry_t *e = find_entry(path);
-    if (e == NULL) {
-        return -ENOENT;
-    }
-
-    /* We don't need to flush at all because reading/writing is not done via
-     * streams.
-     */
-    return 0;
-}
-
-static int exec_fsync(const char *path, int datasync, struct fuse_file_info *fi) {
-    LOG("fsync called on %s (%s)", path, datasync ? "datasync" : "metadata only");
-    if (is_root(path)) {
-        return 0;
-    }
-
-    entry_t *e = find_entry(path);
-    if (e == NULL) {
-        return -ENOENT;
-    }
-
-    /* Like flush, no need to do anything for fsync because we are doing
-     * unbuffered I/O.
-     */
-    return 0;
-}
-
 /* Start of "interesting" code. The guts of the implementation are below in
  * exec_getattr(), exec_open(), exec_read() and exec_write().
  */
@@ -403,6 +368,8 @@ static int exec_write(const char *path, const char *buf, size_t size, off_t offs
 FAIL_STUB(bmap, size_t blocksize, uint64_t *idx);
 FAIL_STUB(chmod, mode_t mode); /* Edit the config file to change permissions. */
 FAIL_STUB(chown, uid_t uid, gid_t gid);
+NOP_STUB(flush, struct fuse_file_info *fi);
+NOP_STUB(fsync, int datasync, struct fuse_file_info *fi);
 NOP_STUB(fsyncdir, int datasync, struct fuse_file_info *fi);
 FAIL_STUB(link, const char *target);
 FAIL_STUB(mkdir, mode_t mode); /* Subdirectories not supported. */

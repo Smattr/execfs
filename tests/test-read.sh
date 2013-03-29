@@ -3,7 +3,6 @@
 # Test reading from an execfs file.
 
 if [ $# -ne 1 ]; then
-    echo $#
     echo "Usage: $0 mountpoint" >&2
     exit 1
 fi

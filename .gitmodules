@@ -1,6 +1,8 @@
 [submodule "iniparser"]
 	path = iniparser
 	url = http://github.com/ndevilla/iniparser.git
+	ignore = dirty
 [submodule "liblog"]
 	path = liblog
 	url = git@github.com:Smattr/liblog
+	ignore = dirty

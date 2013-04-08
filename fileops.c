@@ -6,12 +6,12 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <log.h>
 #include "assert.h"
 #include "entry.h"
 #include "fileops.h"
 #include "globals.h"
 #include "impl.h"
-#include "log.h"
 #include "macros.h"
 
 /* Whether this path is the root of the mount point. */
@@ -67,14 +67,14 @@ static unsigned int access_rights(entry_t *entry) {
 
 /* Called when the file system is unmounted. */
 static void exec_destroy(void *private_data) {
-    LOG("destroy called (unmounting file system)");
+    LOG(INFO, "destroy called (unmounting file system)");
     log_close();
 }
 
 /* Start of "interesting" code. */
 
 static int exec_getattr(const char *path, struct stat *stbuf) {
-    LOG("getattr called on %s", path);
+    LOG(DEBUG, "getattr called on %s", path);
     assert(stbuf != NULL);
 
     /* stbuf->st_dev is ignored. */
@@ -126,7 +126,7 @@ static int exec_getattr(const char *path, struct stat *stbuf) {
 
 static int exec_open(const char *path, struct fuse_file_info *fi) {
     assert(fi != NULL);
-    LOG("open called on %s with flags %d", path, fi->flags);
+    LOG(DEBUG, "open called on %s with flags %d", path, fi->flags);
     entry_t *e = find_entry(path);
     if (e == NULL) {
         return -ENOENT;
@@ -140,7 +140,7 @@ static int exec_open(const char *path, struct fuse_file_info *fi) {
         return -EACCES;
     }
 
-    LOG("Opening %s (%s) for %s", path, e->command,
+    LOG(DEBUG, "Opening %s (%s) for %s", path, e->command,
         rights == O_RDONLY ? "read" :
         rights == O_WRONLY ? "write" : "read/write");
 
@@ -152,7 +152,7 @@ static int exec_read(const char *path, char *buf, size_t size, off_t offset, inf
 }
 
 static int exec_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
-    LOG("readdir called on %s", path);
+    LOG(DEBUG, "readdir called on %s", path);
     if (!is_root(path)) {
         /* Don't support subdirectories. */
         return -EBADF;
@@ -180,13 +180,13 @@ static int exec_write(const char *path, const char *buf, size_t size, off_t offs
 #define FAIL_STUB(func, args...) \
     static int exec_ ## func(const char *path , ## args) { \
         assert(path != NULL); \
-        LOG("Fail stubbed function %s called on %s", __func__, path); \
+        LOG(DEBUG, "Fail stubbed function %s called on %s", __func__, path); \
         return -EACCES; \
     }
 #define NOP_STUB(func, args...) \
     static int exec_ ## func(const char *path , ## args) { \
         assert(path != NULL); \
-        LOG("No-op stubbed function %s called on %s", __func__, path); \
+        LOG(DEBUG, "No-op stubbed function %s called on %s", __func__, path); \
         if (!is_root(path) && find_entry(path) == NULL) { \
             return -ENOENT; \
         } \

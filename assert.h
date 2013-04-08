@@ -1,7 +1,7 @@
 #ifndef _EXECFS_ASSERT_H_
 #define _EXECFS_ASSERT_H_
 
-#include "log.h"
+#include <log.h>
 
 /* Many functions in this code are invoked as FUSE callbacks, which results
  * in assertion failures being invisible to the user. To provide meaningful
@@ -14,7 +14,7 @@
 #else
     #define assert(expr) do { \
         if (!(expr)) { \
-            LOG("%s:%d: %s: Assertion `%s' failed", __FILE__, __LINE__, __func__, #expr); \
+            LOG(DEBUG, "%s:%d: %s: Assertion `%s' failed", __FILE__, __LINE__, __func__, #expr); \
             return -1; \
         } \
     } while(0)

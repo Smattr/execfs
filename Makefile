@@ -6,8 +6,9 @@ endif
 default: execfs
 
 INIPARSER=iniparser/src
+LIBLOG=liblog/src
 
-CFLAGS:=-Wall -I${INIPARSER}
+CFLAGS:=-Wall -I${INIPARSER} -I${LIBLOG}
 
 # Version info. Set this here or via the command line for a release. Otherwise
 # you just get the git commit ID.
@@ -34,17 +35,17 @@ endif
 
 ### EXECFS TARGETS ###
 
-execfs: main.o config.o fileops.o impl.o log.o pipes.o ${INIPARSER}/iniparser.o ${INIPARSER}/dictionary.o
+execfs: main.o config.o fileops.o impl.o pipes.o ${INIPARSER}/iniparser.o \
+        ${INIPARSER}/dictionary.o ${LIBLOG}/log.o
 	@echo " [LD] $@"
 	${Q}gcc ${CFLAGS} -o $@ $^ ${FUSE_ARGS}
 	$(if $(filter 0,${DEBUG}),@echo " [STRIP] $@",)
 	$(if $(filter 0,${DEBUG}),${Q}strip $@,)
 
-main.o: entry.h config.h fileops.h log.h globals.h
+main.o: entry.h config.h fileops.h ${LIBLOG}/log.h globals.h
 config.o: entry.h config.h macros.h
-fileops.o: assert.h entry.h fileops.h globals.h impl.h log.h macros.h
+fileops.o: assert.h entry.h fileops.h globals.h impl.h ${LIBLOG}/log.h macros.h
 impl.o: entry.h fuse.h pipes.h
-log.o: globals.h log.h
 pipes.o: pipes.h
 
 %.o: %.c
@@ -54,8 +55,9 @@ pipes.o: pipes.h
 ### INI parser dependencies ###
 config.o: ${INIPARSER}/iniparser.h ${INIPARSER}/dictionary.h
 ${INIPARSER}/%.o: ${INIPARSER}/%.c ${INIPARSER}/%.h
+${LIBLOG}/%.o: ${LIBLOG}/%.c ${LIBLOG}/%.h
 
-${INIPARSER}/%.c ${INIPARSER}/%.h:
+${INIPARSER}/%.c ${INIPARSER}/%.h ${LIBLOG}/%.c ${LIBLOG}/%.h:
 	${Q}which git >/dev/null
 	${Q}git submodule init
 	${Q}git submodule update
@@ -84,3 +86,7 @@ test-%: tests/test-%.sh tests/test-%.config execfs tests/test.sh
 clean:
 	@echo " [CLEAN] execfs open block *.o"
 	${Q}rm -f execfs open block *.o
+	@echo " [CLEAN] ${INIPARSER}/*.o"
+	${Q}rm -f ${INIPARSER}/*.o
+	@echo " [CLEAN] ${LIBLOG}/*.o"
+	${Q}rm -f ${LIBLOG}/*.o

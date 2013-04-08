@@ -12,12 +12,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <log.h>
 
 #include "config.h"
 #include "entry.h"
 #include "fileops.h"
 #include "globals.h"
-#include "log.h"
 
 /* Configuration file to read. */
 static char *config_filename = NULL;
@@ -89,6 +89,7 @@ static int parse_args(int argc, char **argv, int *last) {
     };
     int index;
     int c;
+    char *log_file = NULL;
 
     while ((c = getopt_long(argc, argv, "dc:f?", options, &index)) != -1) {
         switch (c) {
@@ -115,11 +116,18 @@ static int parse_args(int argc, char **argv, int *last) {
                 /* We've hit the FUSE arguments. */
                 assert(last != NULL);
                 *last = optind;
+                if (log_file != NULL) {
+                    if (log_init(debug ? DEBUG : INFO, log_file, NULL, 1) != 0) {
+                        fprintf(stderr, "Failed to open log file %s\n", log_file);
+                        return -1;
+                    }
+                    free(log_file);
+                }
                 return 0;
             } case 'l': {
-                if (log_open(optarg) != 0) {
-                    fprintf(stderr, "Failed to open log file %s\n", optarg);
-                    errno = EINVAL;
+                log_file = strdup(optarg);
+                if (log_file == NULL) {
+                    errno = ENOMEM;
                     return -1;
                 }
                 break;

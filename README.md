@@ -64,10 +64,10 @@ Inspiration not striking you? Here's some snippets from my configuration.
 <pre>
  [sshconfig]
      access = 400
-     command = cat ~/.ssh/config_* | block
+     command = cat ~/.ssh/config_* | sponge
 </pre>
 
-  I have several different SSH config files and I'd like my active config to be the union of all of them. Unfortunately SSH doesn't have a way of including one config file from another. By symlinking ~/.ssh/config to this file in my execfs partition I get what I want. Note that I need to use the block tool from this repository to coalesce the output.
+  I have several different SSH config files and I'd like my active config to be the union of all of them. Unfortunately SSH doesn't have a way of including one config file from another. By symlinking ~/.ssh/config to this file in my execfs partition I get what I want. Note that I need to use sponge from moreutils to coalesce the output.
 
 <pre>
  [multilog]

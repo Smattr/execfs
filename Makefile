@@ -68,10 +68,6 @@ open: tools/open.o
 	@echo " [LD] $@"
 	${Q}gcc ${CFLAGS} -o $@ $^
 
-block: tools/block.o
-	@echo " [LD] $@"
-	${Q}gcc ${CFLAGS} -o $@ $^
-
 ### TEST TARGETS ###
 
 .PHONY: tests
@@ -84,8 +80,8 @@ test-%: tests/test-%.sh tests/test-%.config execfs tests/test.sh
 
 .PHONY: default clean
 clean:
-	@echo " [CLEAN] execfs open block *.o"
-	${Q}rm -f execfs open block *.o
+	@echo " [CLEAN] execfs open *.o"
+	${Q}rm -f execfs open *.o
 	@echo " [CLEAN] ${INIPARSER}/*.o"
 	${Q}rm -f ${INIPARSER}/*.o
 	@echo " [CLEAN] ${LIBLOG}/*.o"
